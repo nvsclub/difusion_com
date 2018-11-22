@@ -8,5 +8,18 @@ https://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.
 
 ### Add system variables
 
-In the system variables, alter the variable "Path" and add "C:\Program Files\Java\jre1.8.0_191\bin"
-** check if your instalation path is equal **
+In the system variables, alter the variable "Path" and add "C:\Program Files\Java\jdk1.8.0_191\bin"
+**check if your instalation path is equal**
+
+## Running java programs
+
+### Compiling
+
+Use "javac +file+.java"
+Eg. javac helloworld.java
+
+### Running
+
+Use "java +classname+"
+Eg. java HelloWorld
+
