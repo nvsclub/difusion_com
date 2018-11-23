@@ -23,3 +23,8 @@ Eg. javac helloworld.java
 Use "java +classname+"
 Eg. java HelloWorld
 
+## Java sockets exaple
+### In separate terminals
+
+    java Server
+    java Client
