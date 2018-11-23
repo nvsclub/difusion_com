@@ -28,3 +28,7 @@ Eg. java HelloWorld
 
     java Server
     java Client
+
+## Java Graphs visualization
+
+http://graphstream-project.org/
