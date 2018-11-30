@@ -29,7 +29,7 @@ public class Thread_test{
             System.out.println(received);
 
             // Write answer
-            dos.writeUTF("Server Answers");
+            dos.writeUTF("Doo");
           }
         }catch (Exception e){
           e.printStackTrace();
@@ -50,7 +50,7 @@ public class Thread_test{
 
           while(true){
             // Request client
-            dos.writeUTF("Client Call");
+            dos.writeUTF("Dee");
             
             // Receive answer
             String received = dis.readUTF();
