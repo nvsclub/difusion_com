@@ -34,6 +34,7 @@ Eg. java HelloWorld
 http://graphstream-project.org/
 
 # Anti entropy Vs Gossip : Objetivos do projeto
+
 Temos de criar nos e utilizá-los em topologias diferentes.
 
 Vamos definir várias topologias para depois compará-las.
@@ -52,3 +53,15 @@ Analisar as diferentes performances (para os 2 algoritmos e para redes diferente
 - Percentagem de nós que receberam a mensagem correta dos que receberam;
 - Percentagem de nós que receberam a mensagem correta;
 - Análise temporal;
+
+## Implementation
+
+### Class Main
+- Creates graph topology
+- Creates the nodes in the topology and mantains a connection to them in order to verify state
+- Invoques visualization module to check the state of the network
+
+### Class Node
+- Creates a thread for server and a thread for clients OR
+- Creates a server thread and when comunications are needed creates a thread for the client OR
+- Creates a server thread and does the client comunication in the same thread
