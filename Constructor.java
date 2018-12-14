@@ -6,14 +6,14 @@ class Constructor{
   
   public static void main(String[] args){
     
-    System.out.println("Comecei");
+    System.out.println("Constructor: initializing all threads");
     
-    int sock_1 = 6001;
-    int[] conn_1 = {6002, 6003};
-    int sock_2 = 6002;
-    int[] conn_2 = {6001, 6003};
-    int sock_3 = 6003;
-    int[] conn_3 = {6001, 6002};
+    int sock_1 = 15001;
+    int[] conn_1 = {15002, 15003};
+    int sock_2 = 15002;
+    int[] conn_2 = {15001, 15003};
+    int sock_3 = 15003;
+    int[] conn_3 = {15001, 15002};
     
 
     Thread node_1 = new Gossip_node(sock_1, conn_1);
@@ -25,7 +25,7 @@ class Constructor{
     
 
 
-    System.out.println("Acabei");
+    System.out.println("Constructor: all threads initalized");
 
   }
 
@@ -53,83 +53,143 @@ class Gossip_node extends Thread{
   }
   
   public void run(){ 
-    
-    System.out.println("Entrei no nó" + server_port);
-
     try{
       // Get local IP address
       this.ip_address = InetAddress.getByName("localhost");
-
+      
       // Initialize sockets
       this.server_socket = new DatagramSocket(this.server_port);
       this.client_socket = new DatagramSocket();
+      
     } catch (Exception e) { 
       e.printStackTrace(); 
+    
     } 
+    
+    System.out.println("Gossip node: Initialized node " + server_port);
+    
+    // Creating buffers
+    /* These byte buffers are needed because one of the DatagramPacket 
+    arguments is a pointer for an array of bytes where the packet data
+    will be stored  */
+    byte[] send_bytes = new byte[1024];
+    byte[] receive_bytes = new byte[1024];
 
+    // Creating the strings to read the data
+    String send_data = new String(); 
+    String receive_data = new String();   
+    String prev_receive_data = new String();
 
-    // Sender buffer
-    byte[] send_data = new byte[64];    
-    // Receiver buffer
-    byte[] receive_data = new byte[64];    
+    DatagramPacket send_packet;
     
     while(true){
       try{
-        // Waits for new messages
-        DatagramPacket send_packet;
-        DatagramPacket receive_packet = new DatagramPacket(receive_data, receive_data.length);
-        receive_data = receive_packet.getData();
+        // Creating UDP packets to receive the messages
+        /* These packets are responsible in receiving the messages and storing it in memory
+        They are needed in order to store the data received in the socket */
+        DatagramPacket receive_packet = new DatagramPacket(receive_bytes, receive_bytes.length);
+        // Receiving the message and transforming it into a string
+        /* The data is received from the packet into a bytes array and then we typecast it 
+        into a string in order to be readable */
+        server_socket.receive(receive_packet);
+        receive_data = new String(receive_packet.getData()).trim();
+        
+        System.out.println("Gossip node: Message received ~ " + receive_data);
+
+        prev_receive_data = receive_data;
         
         // Check if it is a message or ack
-        if (receive_data[0] == (0xFF)) {
-          // Do ack stuff
-          // When it receives the message
-          //// Selects random port
+        /* This code checks if the received message is a new message to be difused or if it
+        is an acknowledge, positive or negative, from previous comunications */
+        // Positive acknowledge
+        /* If we receive a positive acknowledge our mission will be to keep difusing the message */
+        if (receive_data.contains("YACK")) {
+          // Choose a random client from the ports list
+          // ************************ TO DO ******************************** //
+          /* WE NEED TO CHOOSE THE TARGET PORT IN A MORE EFICIENT WAY, AND STOP WHEN WE HAVE TRANSMITED TO THEM ALL */
           int client = new Random().nextInt(this.client_ports.length);
-          //// Sets the packet and sends it
-          send_packet = new DatagramPacket(receive_data, receive_data.length, ip_address, this.client_ports[client]);
+          
+          // Setup the packet and send it
+          // ************************ TO DO ******************************** //
+          /* This datagram packet needs to transmit the received_data to a new port, and not
+          the data that it receives back */
+          send_packet = new DatagramPacket(receive_data.getBytes(), 64, this.ip_address, this.client_ports[client]);
           this.client_socket.send(send_packet);
-
+          
+          System.out.println("Gossip node: Positive ACKNOWLEDGE received at " + server_port);
+          
         }      
-        else if (receive_data[0] == (0xF0)) {
-          // Do nack stuff
-          // When it receives the message
+        // Negative acknowledge
+        /* If we receive a negative acknowledge our mission will be to keep difusing the message
+        if and only if the probabilities allow us to do so */
+        else if (receive_data.contains("NACK")) {
+          // Generate a random number between 0 and 100 and checks it it should continue difusing
           if (new Random().nextInt(100) < 90){
-            //// Selects random port
+            // Choose a random client from the ports list
+            // ************************ TO DO ******************************** //
+            /* WE NEED TO CHOOSE THE TARGET PORT IN A MORE EFICIENT WAY, AND STOP WHEN WE HAVE TRANSMITED TO THEM ALL */
             int client = new Random().nextInt(this.client_ports.length);
-            //// Sets the packet and sends it
-            send_packet = new DatagramPacket(receive_data, receive_data.length, ip_address, this.client_ports[client]);
-            this.client_socket.send(send_packet);
-
-          }
-        }      
-        else if (receive_data[0] == (0xAA)) {
-          // When it receives the message
-          if (receive_data[4] > id){
-            //// Answers to the new message
-            send_packet = new DatagramPacket(receive_data, receive_data.length, receive_packet.getAddress(), receive_packet.getPort());
+            
+            // Setup the packet and send it
+            // ************************ TO DO ******************************** //
+            /* This datagram packet needs to transmit the received_data to a new port, and not
+            the data that it receives back */
+            send_packet = new DatagramPacket(receive_data.getBytes(), 64, this.ip_address, this.client_ports[client]);
             this.client_socket.send(send_packet);
             
-            //// Selects random port
-            int client = new Random().nextInt(this.client_ports.length);
-            //// Sets the packet and sends it
-            send_packet = new DatagramPacket(receive_data, receive_data.length, ip_address, this.client_ports[client]);
+            System.out.println("Gossip node: Negative ACKOWLEDGE received at " + server_port);
+            
+          }
+        }     
+        // Receives new instruction
+        /* Whenever we receive a new instruction we need to decide if we will be difusing it or
+        if not. The message to be transmited will be ordered by id and our goal will be to 
+        always transmit the most recent message */ 
+        else if (receive_data.contains("DATA")) {
+          // If the message is more recent
+          if (Integer.parseInt(receive_data.replaceAll("\\D+", "")) > id){
+            // Send a positive acknowledge to the node that sent the message
+            send_data = "YACK";
+            send_bytes = send_data.getBytes();
+            send_packet = new DatagramPacket(send_bytes, send_bytes.length, receive_packet.getAddress(), receive_packet.getPort());
             this.client_socket.send(send_packet);
-
+            
+            
+            // Choose a random client from the ports list
+            // ************************ TO DO ******************************** //
+            /* WE NEED TO CHOOSE THE TARGET PORT IN A MORE EFICIENT WAY, AND STOP WHEN WE HAVE TRANSMITED TO THEM ALL 
+            WE NEED TO CLEAR THE BUFFER FROM THE ALREADY SENT */
+            int client = new Random().nextInt(this.client_ports.length);
+            
+            // Setup the packet and send it
+            // ************************ TO DO ******************************** //
+            /* This datagram packet needs to transmit the received_data to a new port, and not
+            the data that it receives back */
+            send_packet = new DatagramPacket(receive_bytes, receive_bytes.length, ip_address, this.client_ports[client]);
+            this.client_socket.send(send_packet);
+            
+            System.out.println("Gossip node: Difunding new message from " + server_port + " with id " + id);
+            
           }
           else{
-            //// Answers to the new message
-            send_packet = new DatagramPacket(receive_data, receive_data.length, receive_packet.getAddress(), receive_packet.getPort());
+            // Sends a negative acknowledge to the sender
+            send_packet = new DatagramPacket(receive_data.getBytes(), 64, receive_packet.getAddress(), receive_packet.getPort());
             this.client_socket.send(send_packet);
-
+            
+            System.out.println("Gossip node: Rejected new message from " + server_port);
+            
           }
-
+          
+          System.out.println("Recebi mensagem nova em " + receive_data + " with id " + id);
+          
         }      
+        
       } catch (Exception e) { 
-				e.printStackTrace(); 
-			} 
+        e.printStackTrace(); 
+      } 
+      
     }
       
   }
-
+    
 }

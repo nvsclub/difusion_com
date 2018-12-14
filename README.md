@@ -65,3 +65,19 @@ Analisar as diferentes performances (para os 2 algoritmos e para redes diferente
 - Creates a thread for server and a thread for clients OR
 - Creates a server thread and when comunications are needed creates a thread for the client OR
 - Creates a server thread and does the client comunication in the same thread
+
+# UDP API
+## DatagramPAcket 
+### setData(byte[])
+### getData(byte[])
+
+## Byte to String
+### String(byte[]).trim()
+## String to Byte
+### String.getBytes()
+
+## Comparing Strings
+### a.equals(b)
+
+## Spliting strings
+### String.split()  --> String[]
