@@ -8,6 +8,7 @@ class Constructor{
     
     System.out.println("Constructor: initializing all threads");
     
+    /* Create a linear topology */
     int sock_1 = 15001;
     int[] conn_1 = {15002, 15003};
     int sock_2 = 15002;
@@ -15,7 +16,7 @@ class Constructor{
     int sock_3 = 15003;
     int[] conn_3 = {15001, 15002};
     
-
+    /* Create the threads according to the topology */
     Thread node_1 = new Gossip_node(sock_1, conn_1);
     node_1.start();
     Thread node_2 = new Gossip_node(sock_2, conn_2);
@@ -23,7 +24,6 @@ class Constructor{
     Thread node_3 = new Gossip_node(sock_3, conn_3);
     node_3.start();
     
-
 
     System.out.println("Constructor: all threads initalized");
 
@@ -45,7 +45,8 @@ class Gossip_node extends Thread{
   
   public int id = 0;
 
-    
+  /* This initializing method allows us to send arguments to the class
+   * whenever we are initalizing a new thread */
   public Gossip_node(int server_port, int[] client_ports){
     this.server_port = server_port;
     this.client_ports= client_ports;
@@ -68,14 +69,15 @@ class Gossip_node extends Thread{
     
     System.out.println("Gossip node: Initialized node " + server_port);
     
-    // Creating buffers
-    /* These byte buffers are needed because one of the DatagramPacket 
-    arguments is a pointer for an array of bytes where the packet data
-    will be stored  */
+    /* Creating buffers
+     * 
+     * These byte buffers are needed because one of the DatagramPacket 
+     * arguments is a pointer for an array of bytes where the packet data
+     * will be stored  */
     byte[] send_bytes = new byte[1024];
     byte[] receive_bytes = new byte[1024];
 
-    // Creating the strings to read the data
+    /* Creating the strings to read the data */
     String send_data = new String(); 
     String receive_data = new String();   
     String prev_receive_data = new String();
@@ -84,13 +86,15 @@ class Gossip_node extends Thread{
     
     while(true){
       try{
-        // Creating UDP packets to receive the messages
-        /* These packets are responsible in receiving the messages and storing it in memory
-        They are needed in order to store the data received in the socket */
+        /* Creating UDP packets to receive the messages
+         * 
+         * These packets are responsible in receiving the messages and storing it in memory
+         * They are needed in order to store the data received in the socket */
         DatagramPacket receive_packet = new DatagramPacket(receive_bytes, receive_bytes.length);
-        // Receiving the message and transforming it into a string
-        /* The data is received from the packet into a bytes array and then we typecast it 
-        into a string in order to be readable */
+        /* Receiving the message and transforming it into a string
+         * 
+         * The data is received from the packet into a bytes array and then we typecast it 
+         * into a string in order to be readable */
         server_socket.receive(receive_packet);
         receive_data = new String(receive_packet.getData()).trim();
         
@@ -98,11 +102,12 @@ class Gossip_node extends Thread{
 
         prev_receive_data = receive_data;
         
-        // Check if it is a message or ack
-        /* This code checks if the received message is a new message to be difused or if it
-        is an acknowledge, positive or negative, from previous comunications */
-        // Positive acknowledge
-        /* If we receive a positive acknowledge our mission will be to keep difusing the message */
+        /* Check if it is a message or ack
+         * This code checks if the received message is a new message to be difused or if it
+         * is an acknowledge, positive or negative, from previous comunications */
+        
+        /* Positive acknowledge
+         * If we receive a positive acknowledge our mission will be to keep difusing the message */
         if (receive_data.contains("YACK")) {
           // Choose a random client from the ports list
           // ************************ TO DO ******************************** //
@@ -118,10 +123,11 @@ class Gossip_node extends Thread{
           
           System.out.println("Gossip node: Positive ACKNOWLEDGE received at " + server_port);
           
-        }      
-        // Negative acknowledge
-        /* If we receive a negative acknowledge our mission will be to keep difusing the message
-        if and only if the probabilities allow us to do so */
+        }
+
+        /* Negative acknowledge
+         * If we receive a negative acknowledge our mission will be to keep difusing the message
+         * if and only if the probabilities allow us to do so */
         else if (receive_data.contains("NACK")) {
           // Generate a random number between 0 and 100 and checks it it should continue difusing
           if (new Random().nextInt(100) < 90){
@@ -140,11 +146,13 @@ class Gossip_node extends Thread{
             System.out.println("Gossip node: Negative ACKOWLEDGE received at " + server_port);
             
           }
-        }     
-        // Receives new instruction
-        /* Whenever we receive a new instruction we need to decide if we will be difusing it or
-        if not. The message to be transmited will be ordered by id and our goal will be to 
-        always transmit the most recent message */ 
+        }
+
+        /* Receives new instruction
+         *
+         *  Whenever we receive a new instruction we need to decide if we will be difusing it or
+         * if not. The message to be transmited will be ordered by id and our goal will be to 
+         * always transmit the most recent message */ 
         else if (receive_data.contains("DATA")) {
           // If the message is more recent
           if (Integer.parseInt(receive_data.replaceAll("\\D+", "")) > id){
