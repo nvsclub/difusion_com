@@ -35,20 +35,24 @@ class Constructor{
 }
 
 /* TODO 
- * When we receive a message remove the sender from the port_list so that we do not send the message back */
+ * When we receive a message remove the sender from the port_list so that we do not send 
+ * the message back 
+ * 
+ * Recheck list: some messages are being sent after list is empty */
 
 class Gossip_node extends Thread{
 
-  public DatagramSocket server_socket;
-  public DatagramSocket client_socket;
+  public DatagramSocket connection_socket;
   
   public InetAddress ip_address;
   
   public int server_port;
   public int[] client_ports;
   
-  
   public int id = 0;
+  public int missing_nodes = 0;
+
+  public Random random_gen = new Random();
 
   /* This initializing method allows us to send arguments to the class
    * whenever we are initalizing a new thread */
@@ -63,9 +67,11 @@ class Gossip_node extends Thread{
       /* Get local IP address */
       this.ip_address = InetAddress.getByName("localhost");
       
-      /* Initialize sockets */
-      this.server_socket = new DatagramSocket(this.server_port);
-      this.client_socket = new DatagramSocket();
+      /* Initialize sockets
+       * Having a client socket makes it so that we cannot naturally identify
+       * the node who sent the message to us 
+       * Thats why we will use only one socket */
+      this.connection_socket = new DatagramSocket(this.server_port);
       
     } catch (Exception e) { 
       e.printStackTrace(); 
@@ -113,88 +119,109 @@ class Gossip_node extends Thread{
          * 
          * The data is received from the packet into a bytes array and then we typecast it 
          * into a string in order to be readable */
-        server_socket.receive(receive_packet);
+        connection_socket.receive(receive_packet);
         receive_data = new String(receive_packet.getData()).trim();
         
-        System.out.println("Gossip node " + this.server_port + ": Message received ~ " + receive_data);
-
+        //System.out.println("Gossip node " + this.server_port + ": Message received ~ " + receive_data + " ~ from " +  receive_packet.getPort());
+        
         /* Check if it is a message or ack
-         * This code checks if the received message is a new message to be difused or if it
-         * is an acknowledge, positive or negative, from previous comunications */
+        * This code checks if the received message is a new message to be difused or if it
+        * is an acknowledge, positive or negative, from previous comunications */
         
         /* Positive acknowledge
-         * If we receive a positive acknowledge our mission will be to keep difusing the message */
+        * If we receive a positive acknowledge our mission will be to keep difusing the message */
         if (receive_data.contains("YACK")) {
-          /* Choose a random client from the stack of ports */
-          int client_id = new Random().nextInt(port_list.size());
-          int client = port_list.get(client_id);
-          
-          /* Setup the packet and send it
-           * and propagates the message */
-          send_bytes = to_propagate.getBytes();
-          send_packet = new DatagramPacket(send_bytes, send_bytes.length, this.ip_address, client);
-          this.client_socket.send(send_packet);
-          
-          /* Delete the port that was sent the message */
-          port_list.remove(client_id);
-
-          System.out.println("Gossip node " + this.server_port + ": Positive ACKNOWLEDGE received");
-          
-        }
-
-        /* Negative acknowledge
-         * If we receive a negative acknowledge our mission will be to keep difusing the message
-         * if and only if the probabilities allow us to do so */
-        else if (receive_data.contains("NACK")) {
-          /* Generate a random number between 0 and 100 and checks it it should continue difusing */
-          if (new Random().nextInt(100) < 90){
+          if (missing_nodes > 0){
             /* Choose a random client from the stack of ports */
-            int client_id = new Random().nextInt(port_list.size());
+            int client_id = random_gen.nextInt(missing_nodes);
             int client = port_list.get(client_id);
             
             /* Setup the packet and send it
             * and propagates the message */
             send_bytes = to_propagate.getBytes();
             send_packet = new DatagramPacket(send_bytes, send_bytes.length, this.ip_address, client);
-            this.client_socket.send(send_packet);
-          
+            this.connection_socket.send(send_packet);
+            
             /* Delete the port that was sent the message */
+            missing_nodes--;
             port_list.remove(client_id);
-
-            System.out.println("Gossip node " + this.server_port + ": Negative ACKOWLEDGE received");
-            System.out.println("Gossip node " + this.server_port + ": Continued transmission");
+            
+            System.out.println("Gossip node " + this.server_port + ": Positive ACKNOWLEDGE received from " +  receive_packet.getPort());
+            //System.out.println("Gossip node " + this.server_port + ": Message sent to " +  client);
             
           }
           else{
-            System.out.println("Gossip node " + this.server_port + ": Stopped transmission");
+            System.out.println("Gossip node " + this.server_port + ": Positive ACKNOWLEDGE received from " +  receive_packet.getPort());
+            System.out.println("Gossip node " + this.server_port + ": No more nodes");
             
           }
+          
         }
-
+        
+        /* Negative acknowledge
+        * If we receive a negative acknowledge our mission will be to keep difusing the message
+        * if and only if the probabilities allow us to do so */
+        else if (receive_data.contains("NACK")) {
+          if (missing_nodes > 0){
+            //System.out.println("Gossip node " + this.server_port + ": Negative ACKOWLEDGE received from " +  receive_packet.getPort());
+            /* Generate a random number between 0 and 100 and checks it it should continue difusing */
+            if (random_gen.nextInt(100) < 90){
+              /* Choose a random client from the stack of ports */
+              int client_id = random_gen.nextInt(missing_nodes);
+              int client = port_list.get(client_id);
+              
+              /* Setup the packet and send it
+              * and propagates the message */
+              send_bytes = to_propagate.getBytes();
+              send_packet = new DatagramPacket(send_bytes, send_bytes.length, this.ip_address, client);
+              this.connection_socket.send(send_packet);
+              
+              /* Delete the port that was sent the message */
+              missing_nodes--;
+              port_list.remove(client_id);
+              
+              //System.out.println("Gossip node " + this.server_port + ": Message sent to " +  client);
+              System.out.println("Gossip node " + this.server_port + ": Received negative ACKNOWLEDGE - Continued transmission");
+            }
+            
+            else{
+              System.out.println("Gossip node " + this.server_port + ": Received negative ACKNOWLEDGE - Stopped transmission");
+              
+            }
+            
+          }
+          else{
+            System.out.println("Gossip node " + this.server_port + ": Received negative ACKNOWLEDGE");
+            System.out.println("Gossip node " + this.server_port + ": No more nodes");
+            
+          }
+          
+        }
+        
         /* Receives new instruction
-         *
-         *  Whenever we receive a new instruction we need to decide if we will be difusing it or
-         * if not. The message to be transmited will be ordered by id and our goal will be to 
-         * always transmit the most recent message */ 
+        *
+        *  Whenever we receive a new instruction we need to decide if we will be difusing it or
+        * if not. The message to be transmited will be ordered by id and our goal will be to 
+        * always transmit the most recent message */ 
         else if (receive_data.contains("DATA")) {
-
+          
           /* Get message id */
           int new_message_id = Integer.parseInt(receive_data.replaceAll("\\D+", ""));
-
+          
           /* If the message is more recent */
           if (new_message_id > id){
             /* Send a positive acknowledge to the node that sent the message */
             send_data = "YACK";
             send_bytes = send_data.getBytes();
             send_packet = new DatagramPacket(send_bytes, send_bytes.length, receive_packet.getAddress(), receive_packet.getPort());
-            this.client_socket.send(send_packet);
+            this.connection_socket.send(send_packet);
             
             /* Save the new best id */
             id = new_message_id;
 
             /* Save the new message to be propagated */
             to_propagate = receive_data;
-
+            
             /* Resets the list */
             while(!port_list.isEmpty()){
               port_list.remove(0);
@@ -204,17 +231,28 @@ class Gossip_node extends Thread{
               port_list.add(i);
             }
             
+            System.out.println("Gossip node " + this.server_port + ": P " + port_list);
+            missing_nodes = port_list.size();
+            
             /* Choose a random client from the stack of ports */
-            int client_id = new Random().nextInt(port_list.size());
+            int client_id = random_gen.nextInt(missing_nodes);
             int client = port_list.get(client_id);
+            
+            /* Update the list */
+            missing_nodes--;
+            port_list.remove(client_id);
             
             /* Setup the packet and send it
             * and propagates the message */
             send_bytes = to_propagate.getBytes();
             send_packet = new DatagramPacket(send_bytes, send_bytes.length, ip_address, client);
-            this.client_socket.send(send_packet);
+            this.connection_socket.send(send_packet);
             
-            System.out.println("Gossip node " + this.server_port + ": Difunding new message from " + receive_packet.getPort() + " to " + client + " with id " + id);
+            
+
+            System.out.println("Gossip node " + this.server_port + ": Message received from " + receive_packet.getPort());
+            //System.out.println("Gossip node " + this.server_port + ": Positive ACKNOWLEDGE sent to " + receive_packet.getPort());
+            //System.out.println("Gossip node " + this.server_port + ": Message sent to " + client + " with id " + id);
             
           }
           else{
@@ -222,9 +260,10 @@ class Gossip_node extends Thread{
             send_data = "NACK";
             send_bytes = send_data.getBytes();
             send_packet = new DatagramPacket(send_bytes, send_bytes.length, receive_packet.getAddress(), receive_packet.getPort());
-            this.client_socket.send(send_packet);
+            this.connection_socket.send(send_packet);
             
-            System.out.println("Gossip node " + this.server_port + ": Rejected new message from " + receive_packet.getPort() + " with id " + new_message_id);
+            System.out.println("Gossip node " + this.server_port + ": Message received from " + receive_packet.getPort());
+            //System.out.println("Gossip node " + this.server_port + ": Negative ACKNOWLEDGE sent to " + receive_packet.getPort() + " for message with id " + new_message_id);
             
           }
           
