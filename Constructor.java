@@ -17,6 +17,14 @@ class Constructor{
     int[] conn_2 = {15001, 15003};
     int sock_3 = 15003;
     int[] conn_3 = {15001, 15002};
+    /*int sock_4 = 15004;
+    int[] conn_4 = {15003, 15005};
+    int sock_5 = 15005;
+    int[] conn_5 = {15004, 15006};
+    int sock_6 = 15006;
+    int[] conn_6 = {15005, 15007};
+    int sock_7 = 15007;
+    int[] conn_7 = {15005, 15006};*/
     
     /* Create the threads according to the topology */
     Thread node_1 = new Gossip_node(sock_1, conn_1);
@@ -25,6 +33,14 @@ class Constructor{
     node_2.start();
     Thread node_3 = new Gossip_node(sock_3, conn_3);
     node_3.start();
+    /*Thread node_4 = new Gossip_node(sock_4, conn_4);
+    node_4.start();
+    Thread node_5 = new Gossip_node(sock_5, conn_5);
+    node_5.start();
+    Thread node_6 = new Gossip_node(sock_6, conn_6);
+    node_6.start();
+    Thread node_7 = new Gossip_node(sock_7, conn_7);
+    node_7.start();*/
     
 
     System.out.println("Constructor: all threads initalized");
@@ -34,18 +50,13 @@ class Constructor{
 
 }
 
-/* TODO 
- * When we receive a message remove the sender from the port_list so that we do not send 
- * the message back 
- * 
- * Recheck list: some messages are being sent after list is empty */
 
 class Gossip_node extends Thread{
 
   public DatagramSocket connection_socket;
   
   public InetAddress ip_address;
-  
+
   public int server_port;
   public int[] client_ports;
   
@@ -231,7 +242,12 @@ class Gossip_node extends Thread{
               port_list.add(i);
             }
             
-            System.out.println("Gossip node " + this.server_port + ": P " + port_list);
+            /* Remove the sender from the list */
+            if (port_list.contains(receive_packet.getPort())){
+              port_list.remove(port_list.indexOf(receive_packet.getPort()));
+
+            }
+            
             missing_nodes = port_list.size();
             
             /* Choose a random client from the stack of ports */
