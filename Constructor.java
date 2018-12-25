@@ -2,10 +2,12 @@ import java.net.*;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Random;
+import java.lang.Object;
 
 /* java graphsteam libraries */
 import org.graphstream.graph.*;
 import org.graphstream.graph.implementations.*;
+
 
 class Constructor{
 
@@ -52,7 +54,7 @@ class Constructor{
     
     
     /* Graph stream initializations */
-    Graph graph = new SingleGraph("Tutorial 1");
+    Graph graph = new SingleGraph("Graph Visualization");
     
     /* We can set the display in the beginning and we do not need to worry about it anymore */
     graph.display();
@@ -60,7 +62,7 @@ class Constructor{
     /* Adding nodes */
     graph.addNode("15001");
     Node node = graph.getNode("15001");
-    node.addAttribute("ui.style", "fill-color: green;");
+    node.addAttribute("ui.style", "fill-color: rgb(0,100,255); size: 20px;");
     graph.addNode("15002");
     graph.addNode("15003");
     graph.addNode("15004");
@@ -155,8 +157,7 @@ class Constructor{
             /* Coloring stuff 
             * Link */
             edge = graph.getEdge(link_to_update);
-            edge.addAttribute("ui.style", "fill-color: red;");
-
+            edge.addAttribute("ui.style", "fill-color: rgb(255,69,0);");
             
             
           }
