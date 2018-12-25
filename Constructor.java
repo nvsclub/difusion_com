@@ -4,8 +4,9 @@ import java.util.ArrayList;;
 import java.util.Random;
 
 class Constructor{
-  
-  
+
+  private static final int main_port = 65535;  
+
   public static void main(String[] args){
     
     System.out.println("Constructor: initializing all threads");
@@ -45,6 +46,59 @@ class Constructor{
 
     System.out.println("Constructor: all threads initalized");
 
+    DatagramSocket connection_socket;
+  
+    InetAddress ip_address;
+
+    /* Setup socket to receive information */
+    try{
+      /* Get local IP address */
+      ip_address = InetAddress.getByName("localhost");
+      
+      /* Initialize sockets
+       * Having a client socket makes it so that we cannot naturally identify
+       * the node who sent the message to us 
+       * Thats why we will use only one socket */
+      connection_socket = new DatagramSocket(main_port);
+
+    
+
+      /* Creating buffers */
+      byte[] receive_bytes = new byte[1024];
+
+      /* Creating the strings to read the data */
+      String receive_data = new String(); 
+          
+      /* Loop to receive the information about the network */
+      while(true){
+        try{
+          /* Creating UDP packets to receive the messages
+          * 
+          * These packets are responsible in receiving the messages and storing it in memory
+          * They are needed in order to store the data received in the socket */
+          DatagramPacket receive_packet = new DatagramPacket(receive_bytes, receive_bytes.length);
+          /* Receiving the message and transforming it into a string
+          * 
+          * The data is received from the packet into a bytes array and then we typecast it 
+          * into a string in order to be readable */
+          connection_socket.receive(receive_packet);
+          receive_data = new String(receive_packet.getData()).trim();
+          
+          System.out.println(receive_data);
+          
+        } catch (Exception e) { 
+          e.printStackTrace(); 
+        } 
+
+      }
+
+    
+    } catch (Exception e) { 
+      e.printStackTrace(); 
+      
+    } 
+
+
   }
 
 
@@ -52,6 +106,8 @@ class Constructor{
 
 
 class Gossip_node extends Thread{
+
+  private static final int main_port = 65535;
 
   public DatagramSocket connection_socket;
   
@@ -133,8 +189,6 @@ class Gossip_node extends Thread{
         connection_socket.receive(receive_packet);
         receive_data = new String(receive_packet.getData()).trim();
         
-        //System.out.println("Gossip node " + this.server_port + ": Message received ~ " + receive_data + " ~ from " +  receive_packet.getPort());
-        
         /* Check if it is a message or ack
         * This code checks if the received message is a new message to be difused or if it
         * is an acknowledge, positive or negative, from previous comunications */
@@ -158,7 +212,6 @@ class Gossip_node extends Thread{
             port_list.remove(client_id);
             
             System.out.println("Gossip node " + this.server_port + ": Positive ACKNOWLEDGE received from " +  receive_packet.getPort());
-            //System.out.println("Gossip node " + this.server_port + ": Message sent to " +  client);
             
           }
           else{
@@ -174,7 +227,6 @@ class Gossip_node extends Thread{
         * if and only if the probabilities allow us to do so */
         else if (receive_data.contains("NACK")) {
           if (missing_nodes > 0){
-            //System.out.println("Gossip node " + this.server_port + ": Negative ACKOWLEDGE received from " +  receive_packet.getPort());
             /* Generate a random number between 0 and 100 and checks it it should continue difusing */
             if (random_gen.nextInt(100) < 90){
               /* Choose a random client from the stack of ports */
@@ -191,7 +243,6 @@ class Gossip_node extends Thread{
               missing_nodes--;
               port_list.remove(client_id);
               
-              //System.out.println("Gossip node " + this.server_port + ": Message sent to " +  client);
               System.out.println("Gossip node " + this.server_port + ": Received negative ACKNOWLEDGE - Continued transmission");
             }
             
@@ -264,12 +315,16 @@ class Gossip_node extends Thread{
             send_packet = new DatagramPacket(send_bytes, send_bytes.length, ip_address, client);
             this.connection_socket.send(send_packet);
             
-            
 
             System.out.println("Gossip node " + this.server_port + ": Message received from " + receive_packet.getPort());
-            //System.out.println("Gossip node " + this.server_port + ": Positive ACKNOWLEDGE sent to " + receive_packet.getPort());
-            //System.out.println("Gossip node " + this.server_port + ": Message sent to " + client + " with id " + id);
             
+            /* Send the information to the main */
+            send_data = Integer.toString(receive_packet.getPort()) + Integer.toString(this.server_port);
+            send_bytes = send_data.getBytes();
+            send_packet = new DatagramPacket(send_bytes, send_bytes.length, receive_packet.getAddress(), main_port);
+            this.connection_socket.send(send_packet);
+
+
           }
           else{
             /* Send a negative acknowledge to the node that sent the message */
@@ -279,7 +334,6 @@ class Gossip_node extends Thread{
             this.connection_socket.send(send_packet);
             
             System.out.println("Gossip node " + this.server_port + ": Message received from " + receive_packet.getPort());
-            //System.out.println("Gossip node " + this.server_port + ": Negative ACKNOWLEDGE sent to " + receive_packet.getPort() + " for message with id " + new_message_id);
             
           }
           
