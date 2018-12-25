@@ -14,7 +14,7 @@ class Starter{
       InetAddress ip_address = InetAddress.getByName("localhost");
       
       /* Initialize sockets */
-      DatagramSocket client_socket = new DatagramSocket();
+      DatagramSocket client_socket = new DatagramSocket(49999);
       
       while(true){
         /* Get the port to send to */
@@ -23,7 +23,7 @@ class Starter{
         send_to_port = sc.nextInt();
         sc.nextLine(); /* to skip the enter when entering the port */
         if(send_to_port == 0){
-          send_to_port = 15001;
+          send_to_port = 50000;
         }
         
         /* Get the message to be sent */

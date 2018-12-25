@@ -2,11 +2,15 @@ import java.net.*;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Random;
-import java.lang.Object;
+import java.util.Scanner;
+
+import java.util.regex.Pattern;
+import java.util.regex.Matcher;
 
 /* java graphsteam libraries */
 import org.graphstream.graph.*;
 import org.graphstream.graph.implementations.*;
+import org.graphstream.algorithm.generator.*;
 
 
 class Constructor{
@@ -15,73 +19,105 @@ class Constructor{
 
   public static void main(String[] args){
     
-    System.out.println("Constructor: initializing all threads");
+    /* Initialize scanner to get data from terminal */
+    Scanner sc = new Scanner(System.in);
     
-    /* Create a linear topology */
-    int sock_1 = 15001;
-    int[] conn_1 = {15002, 15003};
-    int sock_2 = 15002;
-    int[] conn_2 = {15001, 15003, 15007};
-    int sock_3 = 15003;
-    int[] conn_3 = {15001, 15002, 15004};
-    int sock_4 = 15004;
-    int[] conn_4 = {15003, 15005};
-    int sock_5 = 15005;
-    int[] conn_5 = {15004, 15006};
-    int sock_6 = 15006;
-    int[] conn_6 = {15005, 15007};
-    int sock_7 = 15007;
-    int[] conn_7 = {15005, 15006, 15002};
-    
-    /* Create the threads according to the topology */
-    Thread node_1 = new Gossip_node(sock_1, conn_1);
-    node_1.start();
-    Thread node_2 = new Gossip_node(sock_2, conn_2);
-    node_2.start();
-    Thread node_3 = new Gossip_node(sock_3, conn_3);
-    node_3.start();
-    Thread node_4 = new Gossip_node(sock_4, conn_4);
-    node_4.start();
-    Thread node_5 = new Gossip_node(sock_5, conn_5);
-    node_5.start();
-    Thread node_6 = new Gossip_node(sock_6, conn_6);
-    node_6.start();
-    Thread node_7 = new Gossip_node(sock_7, conn_7);
-    node_7.start();
-    
+    /* Get the graph generator to use */
+    System.out.println("Starter: Choose the graph to be generated:");
+    System.out.println("1 - Dorogovtsev mendes:");
+    int algorithm_id;
+    algorithm_id = sc.nextInt();
+    sc.nextLine(); /* to skip the enter when entering the port */
+    String algorithm_choosen = new String();
+    if(algorithm_id == 1){
+      algorithm_choosen = "Dorogovtsev mendes";
 
-    System.out.println("Constructor: all threads initalized");
+    }
+
+
+    /* Get the size of the graph to generate */
+    System.out.println("Starter: Enter the size of the graph to be generated: ");
+    int size_of_graph;
+    size_of_graph = sc.nextInt();
+    sc.nextLine(); /* to skip the enter when entering the port */
     
+    /* Generating DorogovtsevMendes type graph */
+    Graph graph = new SingleGraph(algorithm_choosen);
+    Generator gen = new DorogovtsevMendesGenerator();
+    gen.addSink(graph);
+    gen.begin();
+
+    for(int i=0; i<size_of_graph; i++) {
+      gen.nextEvents();
+    }
     
-    /* Graph stream initializations */
-    Graph graph = new SingleGraph("Graph Visualization");
-    
-    /* We can set the display in the beginning and we do not need to worry about it anymore */
+    gen.end();
     graph.display();
-    
-    /* Adding nodes */
-    graph.addNode("15001");
-    Node node = graph.getNode("15001");
+
+    /* Paint the node 0 */
+    Node node = graph.getNode("0");
     node.addAttribute("ui.style", "fill-color: rgb(0,100,255); size: 20px;");
-    graph.addNode("15002");
-    graph.addNode("15003");
-    graph.addNode("15004");
-    graph.addNode("15005");
-    graph.addNode("15006");
-    graph.addNode("15007");
     
-    /* Adding edges */
+    /* Get the size of the graph that might not match the size set */
+    size_of_graph = graph.getNodeCount();
+    
     Edge edge;
-    graph.addEdge("1500115002", "15001", "15002");
-    graph.addEdge("1500115003", "15001", "15003");
-    graph.addEdge("1500215003", "15002", "15003");
-    graph.addEdge("1500215007", "15002", "15007");
-    graph.addEdge("1500315004", "15003", "15004");
-    graph.addEdge("1500415005", "15004", "15005");
-    graph.addEdge("1500515006", "15005", "15006");
-    graph.addEdge("1500615007", "15006", "15007");
     
     System.out.println("Constructor: graph initialized");
+    
+    Pattern p = Pattern.compile("-?\\d+");
+    Matcher m;
+
+    int[] node_pair = {0, 0};
+    List<Integer> list_of_nodes_connected = new ArrayList<Integer>();
+
+    /* Initializing nodes */
+    for(int i=0; i<size_of_graph; i++) {
+      /* Get a list of nodes to which the node connects */
+      for(Edge e:graph.getEachEdge()) {
+        /* Get the pair of nodes connected */
+        m = p.matcher(e.getId());
+        m.find();
+        if(Integer.parseInt(m.group()) > 0){
+          node_pair[0] = Integer.parseInt(m.group());
+          
+        }
+        else{
+          node_pair[0] = -Integer.parseInt(m.group());
+
+        }
+
+        m.find();
+        if(Integer.parseInt(m.group()) > 0){
+          node_pair[1] = Integer.parseInt(m.group());
+
+        }
+        else{
+          node_pair[1] = -Integer.parseInt(m.group());
+
+        }
+
+        /* Check if any of the nodes is the node being checked */
+        if(node_pair[0] == i){
+          list_of_nodes_connected.add(node_pair[1]);
+
+        }
+        else if(node_pair[1] == i){
+          list_of_nodes_connected.add(node_pair[0]);
+
+        }
+
+      }
+
+      /* Initialize threads for the node */
+      Thread nodeThread = new Gossip_node(50000 + i, list_of_nodes_connected);
+      nodeThread.start();
+
+      list_of_nodes_connected.clear();
+      
+    }    
+
+    System.out.println("Constructor: all threads initalized");
     
     
     /* Connection variables */
@@ -110,8 +146,8 @@ class Constructor{
       String link_to_update = new String();
       String node_to_update = new String();
       
-      String node_that_sent = new String();
-      String node_that_updated = new String();
+      int node_that_sent = 0;
+      int node_that_updated = 0;
       
       System.out.println("Constructor: receiver port configured");
       
@@ -136,33 +172,38 @@ class Constructor{
             node_to_update = receive_data.substring(receive_data.length() - 5);
 
             /* Guarantees that the order is correct in the link */
-            node_that_sent = receive_data.substring(0, receive_data.length() - 5);
-            node_that_updated = receive_data.substring(receive_data.length() - 5);
+            node_that_sent = Integer.parseInt(receive_data.substring(0, receive_data.length() - 5)) - 50000;
+            node_that_updated = Integer.parseInt(receive_data.substring(receive_data.length() - 5)) - 50000;
             
-            if(Integer.parseInt(node_that_updated) > Integer.parseInt(node_that_sent)){
-              link_to_update = receive_data;
+            if(node_that_updated > node_that_sent){
+              link_to_update = node_that_sent + "-" + node_that_updated;
 
             }
             else{
-              link_to_update = node_that_updated + node_that_sent;
+              link_to_update = node_that_updated + "-" + node_that_sent;
+
             }
             
-            /* Good practices lesson:
-             * Verify if the node/edge is found, else program will crash when it doesnt. 
-             * Here we have the certainty that it exists so we progress forward */
-            /* Coloring stuff 
-            * Node */
-            node = graph.getNode(node_to_update);
-            node.addAttribute("ui.style", "fill-color: blue;");
-            /* Coloring stuff 
-            * Link */
-            edge = graph.getEdge(link_to_update);
-            edge.addAttribute("ui.style", "fill-color: rgb(255,69,0);");
+            /* Do not act on the starter connection */
+            if(node_that_sent != -1 && node_that_updated != -1){
+              /* Good practices lesson:
+              * Verify if the node/edge is found, else program will crash when it doesnt. 
+              * Here we have the certainty that it exists so we progress forward */
+              /* Coloring stuff 
+              * Node */
+              node = graph.getNode(Integer.toString(node_that_updated));
+              node.addAttribute("ui.style", "fill-color: blue;");
+              /* Coloring stuff 
+              * Link */
+              edge = graph.getEdge(link_to_update);
+              edge.addAttribute("ui.style", "fill-color: rgb(255,69,0);");
+              
+              System.out.println("Constructor: updated node " + node_that_updated + " and link " + link_to_update);
             
+            }
             
           }
           
-          System.out.println("Constructor: updated node " + node_that_updated + " and link " + link_to_update + node_that_sent);
           
         } catch (Exception e) { 
           e.printStackTrace(); 
@@ -192,7 +233,7 @@ class Gossip_node extends Thread{
   public InetAddress ip_address;
 
   public int server_port;
-  public int[] client_ports;
+  public List<Integer> client_ports;
   
   public int id = 0;
   public int missing_nodes = 0;
@@ -201,9 +242,9 @@ class Gossip_node extends Thread{
 
   /* This initializing method allows us to send arguments to the class
    * whenever we are initalizing a new thread */
-  public Gossip_node(int server_port, int[] client_ports){
+  public Gossip_node(int server_port, List<Integer> client_ports){
     this.server_port = server_port;
-    this.client_ports= client_ports;
+    this.client_ports= new ArrayList<Integer>(client_ports);
 
   }
   
@@ -226,39 +267,37 @@ class Gossip_node extends Thread{
     System.out.println("Gossip node " + this.server_port + ": Initialized");
     
     /* Creating buffers
-     * 
-     * These byte buffers are needed because one of the DatagramPacket 
-     * arguments is a pointer for an array of bytes where the packet data
-     * will be stored  */
+    * 
+    * These byte buffers are needed because one of the DatagramPacket 
+    * arguments is a pointer for an array of bytes where the packet data
+    * will be stored  */
     byte[] send_bytes = new byte[1024];
     byte[] receive_bytes = new byte[1024];
-
+    
     /* Creating the strings to read the data */
     String send_data = new String(); 
     String receive_data = new String();   
-
+    
     /* Create a list with the ports where the message was not sent yet
-     * 
-     * We use a list here because it uses dinamic memory
-     * Had we used a normal array it would be way more complex to remove
-     * a element because it statically allocates memory*/
+    * 
+    * We use a list here because it uses dinamic memory
+    * Had we used a normal array it would be way more complex to remove
+    * a element because it statically allocates memory*/
     List<Integer> port_list = new ArrayList<Integer>();
     /* Populate the list with the clients */
-    for(int i : client_ports){
-      port_list.add(i);
-    }
+    port_list = new ArrayList<Integer>(this.client_ports);
     
     /* Saver for the message to be propagated */
     String to_propagate = new String();
-
+    
     DatagramPacket send_packet;
     
     while(true){
       try{
         /* Creating UDP packets to receive the messages
-         * 
-         * These packets are responsible in receiving the messages and storing it in memory
-         * They are needed in order to store the data received in the socket */
+        * 
+        * These packets are responsible in receiving the messages and storing it in memory
+        * They are needed in order to store the data received in the socket */
         DatagramPacket receive_packet = new DatagramPacket(receive_bytes, receive_bytes.length);
         /* Receiving the message and transforming it into a string
          * 
@@ -277,7 +316,7 @@ class Gossip_node extends Thread{
           if (missing_nodes > 0){
             /* Choose a random client from the stack of ports */
             int client_id = random_gen.nextInt(missing_nodes);
-            int client = port_list.get(client_id);
+            int client = port_list.get(client_id) + 50000;
             
             /* Setup the packet and send it
             * and propagates the message */
@@ -309,7 +348,7 @@ class Gossip_node extends Thread{
             if (random_gen.nextInt(100) < 90){
               /* Choose a random client from the stack of ports */
               int client_id = random_gen.nextInt(missing_nodes);
-              int client = port_list.get(client_id);
+              int client = port_list.get(client_id) + 50000;
               
               /* Setup the packet and send it
               * and propagates the message */
@@ -367,9 +406,7 @@ class Gossip_node extends Thread{
               port_list.remove(0);
             }
             /* Populate the list with the clients */
-            for(int i : client_ports){
-              port_list.add(i);
-            }
+            port_list = new ArrayList<Integer>(this.client_ports);
             
             /* Remove the sender from the list */
             if (port_list.contains(receive_packet.getPort())){
@@ -381,7 +418,7 @@ class Gossip_node extends Thread{
             
             /* Choose a random client from the stack of ports */
             int client_id = random_gen.nextInt(missing_nodes);
-            int client = port_list.get(client_id);
+            int client = port_list.get(client_id) + 50000;
             
             /* Update the list */
             missing_nodes--;
