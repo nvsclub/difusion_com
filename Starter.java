@@ -5,6 +5,8 @@ import java.util.Random;
 
 class Starter{
 
+  private static final int port_offset = 60000;
+
   public static void main(String[] args){ 
     
     /* Initialize scanner to get data from terminal */
@@ -15,7 +17,7 @@ class Starter{
       InetAddress ip_address = InetAddress.getByName("localhost");
       
       /* Initialize sockets */
-      DatagramSocket client_socket = new DatagramSocket(49999);
+      DatagramSocket client_socket = new DatagramSocket(port_offset - 1);
       
       /* Random number generator */
       Random random_gen = new Random();
@@ -29,10 +31,10 @@ class Starter{
         send_to_port = sc.nextInt();
         sc.nextLine(); /* to skip the enter when entering the port */
         if(send_to_port == 0){
-          send_to_port = 50000;
+          send_to_port = port_offset;
         }
         else if(send_to_port == 1){
-          send_to_port = 50000 + random_gen.nextInt(100);
+          send_to_port = port_offset + random_gen.nextInt(100);
         }
         
         /* Get the message to be sent */

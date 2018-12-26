@@ -17,7 +17,7 @@ import org.graphstream.algorithm.generator.*;
 * */
 class Constructor{
 
-  private static final int port_offset = 50000;
+  private static final int port_offset = 60000;
   private static final int main_port = 65535;  
   private static final boolean enablePrints = false;  
 
@@ -362,7 +362,7 @@ class Constructor{
           connection_socket.receive(receive_packet);
           receive_data = new String(receive_packet.getData()).trim();
           
-          /* Get the information received about the structure */
+          /* Process the information received about the structure */
           if(receive_data.length() > 5){
             node_to_update = receive_data.substring(receive_data.length() - 16, receive_data.length() - 11);
 
@@ -516,7 +516,7 @@ class Constructor{
               /* Coloring stuff 
               * Link */
               edge = graph.getEdge(link_to_update);
-              edge.addAttribute("ui.style", "fill-color: rgb(" + color_to_update + ");");
+              edge.addAttribute("ui.style", "fill-color: rgb(" + color_to_update + "); size: 3px;");
               
               if(enablePrints){
                 System.out.println("Constructor: updated node " + node_that_updated + " and link " + link_to_update);
@@ -546,12 +546,11 @@ class Constructor{
 }
 
 /* @TODO 
-* Add a delay in the thread to simulate delays in comunications and make visualization easier 
-* FIX BUG: use Lobster w/ 1000 nodes to replicate fault OR d-mendes w 1000 nodes */
+* */
 class Gossip_node extends Thread{
 
   private static final long delay_per_cycle = 600;
-  private static final int port_offset = 50000;
+  private static final int port_offset = 60000;
   private static final int main_port = 65535;
   private static final boolean enablePrints = false;
 
