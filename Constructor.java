@@ -12,7 +12,8 @@ import org.graphstream.graph.*;
 import org.graphstream.graph.implementations.*;
 import org.graphstream.algorithm.generator.*;
 
-
+/* @TODO
+* */
 class Constructor{
 
   private static final int main_port = 65535;  
@@ -24,16 +25,20 @@ class Constructor{
     
     /* Get the graph generator to use */
     System.out.println("Starter: Choose the graph to be generated:");
-    System.out.println("1 - Dorogovtsev mendes:");
+    System.out.println("1 - Barabasi Albert");
+    System.out.println("2 - Chain");
+    System.out.println("3 - Chvatal");
+    System.out.println("4 - Dorogovtsev-Mendes");
+    System.out.println("5 - Flower Snark");
+    System.out.println("6 - Full Graph");
+    System.out.println("7 - Full Grid");
+    System.out.println("8 - Incomplete Grid");
+    System.out.println("9 - Lobster");
+    System.out.println("10 - Petersen");
+    System.out.println("11 - RandomEuclidean");
     int algorithm_id;
     algorithm_id = sc.nextInt();
     sc.nextLine(); /* to skip the enter when entering the port */
-    String algorithm_choosen = new String();
-    if(algorithm_id == 1){
-      algorithm_choosen = "Dorogovtsev mendes";
-
-    }
-
 
     /* Get the size of the graph to generate */
     System.out.println("Starter: Enter the size of the graph to be generated: ");
@@ -41,12 +46,57 @@ class Constructor{
     size_of_graph = sc.nextInt();
     sc.nextLine(); /* to skip the enter when entering the port */
     
-    /* Generating DorogovtsevMendes type graph */
-    Graph graph = new SingleGraph(algorithm_choosen);
-    Generator gen = new DorogovtsevMendesGenerator();
+    /* Generating graph according to the demands */
+    Graph graph = new SingleGraph("Graph");
+    /* Defined as default in case of error */
+    Generator gen = new DorogovtsevMendesGenerator(); /* ID x, links x-x */
+    if(algorithm_id == 1){
+      gen = new BarabasiAlbertGenerator(); /* ID x, links x_x */
+
+    }
+    else if(algorithm_id == 2){
+      gen = new ChainGenerator(); /* ID x, links x_x */
+
+    }
+    else if(algorithm_id == 3){
+      gen = new ChvatalGenerator(); /* @TODO ID xx+1, links x-x */
+
+    }
+    else if(algorithm_id == 5){
+      gen = new FlowerSnarkGenerator(); /* @TODO ID Axxxx, AxxxxAxxxx */
+      
+    }
+    else if(algorithm_id == 6){
+      gen = new FullGenerator(); /* ID x, links x_x */
+      
+    }
+    else if(algorithm_id == 7){
+      gen = new GridGenerator(); /* @TODO ID x_y, links x */
+      
+    }
+    else if(algorithm_id == 8){
+      gen = new IncompleteGridGenerator(); /* @TODO ID x_y, links x_y-x_y */
+      
+    }
+    else if(algorithm_id == 9){
+      gen = new LobsterGenerator(); /* ID xxxx, links xxxx-xxxx */
+      /* @TODO This,and others, are generating errors in the node */
+
+    }
+    else if(algorithm_id == 10){
+      /* This algorithm is a special case
+       * it always has 10 nodes */
+      gen = new PetersenGraphGenerator(); /* @TODO ID xx, links (xx;xx) */
+      
+    }
+    else if(algorithm_id == 11){
+      gen = new RandomEuclideanGenerator(); /* ID x, links x-x */
+
+    }
+
     gen.addSink(graph);
     gen.begin();
-
+    
     for(int i=0; i<size_of_graph; i++) {
       gen.nextEvents();
     }
@@ -54,8 +104,33 @@ class Constructor{
     gen.end();
     graph.display();
 
+    /* Use for graph debugging */
+    for(Node n:graph) {
+      System.out.println(n.getId());
+    }
+    for(Edge e:graph.getEachEdge()) {
+      System.out.println(e.getId());
+    }
+
+
+    /* Get length of the ID for padding */
+    int id_length = String.valueOf(size_of_graph).length();
+
+    /* Detect the initial node based on the algorithm */
+    String node_zero = new String();
+    if(algorithm_id == 9){
+      node_zero = "0000";
+    
+    }
+    else if(algorithm_id == 10){
+      node_zero = "00";
+    }
+    else{
+      node_zero = "0";
+    }
+    
     /* Paint the node 0 */
-    Node node = graph.getNode("0");
+    Node node = graph.getNode(node_zero);
     node.addAttribute("ui.style", "fill-color: rgb(0,100,255); size: 20px;");
     
     /* Get the size of the graph that might not match the size set */
@@ -148,6 +223,7 @@ class Constructor{
       
       int node_that_sent = 0;
       int node_that_updated = 0;
+
       
       System.out.println("Constructor: receiver port configured");
       
@@ -175,12 +251,58 @@ class Constructor{
             node_that_sent = Integer.parseInt(receive_data.substring(0, receive_data.length() - 5)) - 50000;
             node_that_updated = Integer.parseInt(receive_data.substring(receive_data.length() - 5)) - 50000;
             
+            /* Change id in case ID = x+1 */
+            if (algorithm_id == 3){
+              node_that_sent++;
+              node_that_updated++;
+            }
+            /* Check for correct order */
             if(node_that_updated > node_that_sent){
-              link_to_update = node_that_sent + "-" + node_that_updated;
+              /* Check algorithm for separation character */
+              if(algorithm_id == 1 || algorithm_id == 2 || algorithm_id == 6){
+                link_to_update = node_that_sent + "_" + node_that_updated;
+
+              }
+              else if(algorithm_id == 9){
+                /* Make sure that the padding is done correctly */
+                link_to_update = "(" + String.format("%04d", node_that_sent) + ";" +  String.format("%04d", node_that_updated) + ")";
+                node_to_update = String.format("%04d", node_that_updated);
+
+              }
+              else if(algorithm_id == 10){
+                /* Make sure that the padding is done correctly */
+                link_to_update = "(" + String.format("%02d", node_that_sent) + ";" +  String.format("%02d", node_that_updated) + ")";
+                node_to_update = String.format("%02d", node_that_updated);
+
+              }
+              else{
+                link_to_update = node_that_sent + "-" + node_that_updated;
+
+              }
 
             }
             else{
-              link_to_update = node_that_updated + "-" + node_that_sent;
+              /* Check algorithm for separation character */
+              if(algorithm_id == 1 || algorithm_id == 2 || algorithm_id == 6){
+                link_to_update = node_that_updated + "_" + node_that_sent;
+
+              }
+              else if(algorithm_id == 9){
+                /* Make sure that the padding is done correctly */
+                link_to_update = "(" + String.format("%04d", node_that_updated) + ";" +  String.format("%04d", node_that_sent) + ")";
+                node_to_update = String.format("%04d", node_that_updated);
+
+              }
+              else if(algorithm_id == 10){
+                /* Make sure that the padding is done correctly */
+                link_to_update = "(" + String.format("%02d", node_that_updated) + ";" +  String.format("%02d", node_that_sent) + ")";
+                node_to_update = String.format("%02d", node_that_updated);
+
+              }
+              else{
+                link_to_update = node_that_updated + "-" + node_that_sent;
+
+              }
 
             }
             
@@ -223,7 +345,9 @@ class Constructor{
 
 }
 
-
+/* @TODO 
+* Add a delay in the thread to simulate delays in comunications and make visualization easier 
+* FIX BUG: use Lobster w/ 1000 nodes to replicate fault */
 class Gossip_node extends Thread{
 
   private static final int main_port = 65535;
