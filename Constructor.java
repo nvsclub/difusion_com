@@ -13,6 +13,8 @@ import org.graphstream.graph.implementations.*;
 import org.graphstream.algorithm.generator.*;
 
 /* @TODO
+* Fix graphs on README.md
+* Implement accepting nodes RGB output
 * */
 class Constructor{
 
@@ -59,7 +61,7 @@ class Constructor{
 
     }
     else if(algorithm_id == 3){
-      gen = new ChvatalGenerator(); /* @TODO ID xx+1, links x-x */
+      gen = new ChvatalGenerator(); /* ID xx+1, links xx_xx */
 
     }
     else if(algorithm_id == 5){
@@ -118,7 +120,11 @@ class Constructor{
 
     /* Detect the initial node based on the algorithm */
     String node_zero = new String();
-    if(algorithm_id == 9){
+    if(algorithm_id == 3){
+      node_zero = "01";
+    
+    }
+    else if(algorithm_id == 9){
       node_zero = "0000";
     
     }
@@ -147,51 +153,157 @@ class Constructor{
     List<Integer> list_of_nodes_connected = new ArrayList<Integer>();
 
     /* Initializing nodes */
-    for(int i=0; i<size_of_graph; i++) {
-      /* Get a list of nodes to which the node connects */
-      for(Edge e:graph.getEachEdge()) {
-        /* Get the pair of nodes connected */
-        m = p.matcher(e.getId());
-        m.find();
-        if(Integer.parseInt(m.group()) > 0){
-          node_pair[0] = Integer.parseInt(m.group());
+    /* For bidirectional algorithms we need to remove one of the directional links */
+    if(algorithm_id == 2){
+      for(int i=0; i<size_of_graph; i++) {
+        /* Get a list of nodes to which the node connects */
+        for(Edge e:graph.getEachEdge()) {
+          /* Get the pair of nodes connected */
+          m = p.matcher(e.getId());
+          m.find();
+          if(Integer.parseInt(m.group()) > 0){
+            node_pair[0] = Integer.parseInt(m.group());
+            
+          }
+          else{
+            node_pair[0] = -Integer.parseInt(m.group());
+            
+          }
+          
+          m.find();
+          if(Integer.parseInt(m.group()) > 0){
+            node_pair[1] = Integer.parseInt(m.group());
+            
+          }
+          else{
+            node_pair[1] = -Integer.parseInt(m.group());
+            
+          }
+          
+          
+          /* Filter one of the directions */
+          if(node_pair[0] > node_pair[1]){
+            /* Check if any of the nodes is the node being checked */
+            if(node_pair[0] == i){
+              list_of_nodes_connected.add(node_pair[1]);
+              
+            }
+            else if(node_pair[1] == i){
+              list_of_nodes_connected.add(node_pair[0]);
+              
+            }
+
+          }
+            
+        }
+        
+        /* Initialize threads for the node */
+        Thread nodeThread = new Gossip_node(50000 + i, list_of_nodes_connected);
+        nodeThread.start();
+        
+        list_of_nodes_connected.clear();
+        
+      }
+     
+    }
+    /* For algorithms where count starts at 1 */
+    if(algorithm_id == 3){
+      for(int i=1; i<=size_of_graph; i++) {
+        /* Get a list of nodes to which the node connects */
+        for(Edge e:graph.getEachEdge()) {
+          /* Get the pair of nodes connected */
+          m = p.matcher(e.getId());
+          m.find();
+          if(Integer.parseInt(m.group()) > 0){
+            node_pair[0] = Integer.parseInt(m.group());
+            
+          }
+          else{
+            node_pair[0] = -Integer.parseInt(m.group());
+            
+          }
+          
+          m.find();
+          if(Integer.parseInt(m.group()) > 0){
+            node_pair[1] = Integer.parseInt(m.group());
+            
+          }
+          else{
+            node_pair[1] = -Integer.parseInt(m.group());
+            
+          }
+          
+          
+          /* Check if any of the nodes is the node being checked */
+          if(node_pair[0] == i){
+            list_of_nodes_connected.add(node_pair[1]-1);
+            
+          }
+          else if(node_pair[1] == i){
+            list_of_nodes_connected.add(node_pair[0]-1);
+            
+          }
           
         }
-        else{
-          node_pair[0] = -Integer.parseInt(m.group());
-
-        }
-
-        m.find();
-        if(Integer.parseInt(m.group()) > 0){
-          node_pair[1] = Integer.parseInt(m.group());
-
-        }
-        else{
-          node_pair[1] = -Integer.parseInt(m.group());
-
-        }
-
-        /* Check if any of the nodes is the node being checked */
-        if(node_pair[0] == i){
-          list_of_nodes_connected.add(node_pair[1]);
-
-        }
-        else if(node_pair[1] == i){
-          list_of_nodes_connected.add(node_pair[0]);
-
-        }
-
+        
+        /* Initialize threads for the node */
+        Thread nodeThread = new Gossip_node(50000 + i - 1, list_of_nodes_connected);
+        nodeThread.start();
+        
+        list_of_nodes_connected.clear();
+        
       }
+     
+    }
+    else{
+      for(int i=0; i<size_of_graph; i++) {
+        /* Get a list of nodes to which the node connects */
+        for(Edge e:graph.getEachEdge()) {
+          /* Get the pair of nodes connected */
+          m = p.matcher(e.getId());
+          m.find();
+          if(Integer.parseInt(m.group()) > 0){
+            node_pair[0] = Integer.parseInt(m.group());
+            
+          }
+          else{
+            node_pair[0] = -Integer.parseInt(m.group());
+            
+          }
+          
+          m.find();
+          if(Integer.parseInt(m.group()) > 0){
+            node_pair[1] = Integer.parseInt(m.group());
+            
+          }
+          else{
+            node_pair[1] = -Integer.parseInt(m.group());
+            
+          }
+          
+          
+          /* Check if any of the nodes is the node being checked */
+          if(node_pair[0] == i){
+            list_of_nodes_connected.add(node_pair[1]);
+            
+          }
+          else if(node_pair[1] == i){
+            list_of_nodes_connected.add(node_pair[0]);
+            
+          }
+          
+        }
+        
+        /* Initialize threads for the node */
+        Thread nodeThread = new Gossip_node(50000 + i, list_of_nodes_connected);
+        nodeThread.start();
+        
+        list_of_nodes_connected.clear();
+        
+      }    
 
-      /* Initialize threads for the node */
-      Thread nodeThread = new Gossip_node(50000 + i, list_of_nodes_connected);
-      nodeThread.start();
-
-      list_of_nodes_connected.clear();
+    }
       
-    }    
-
     System.out.println("Constructor: all threads initalized");
     
     
@@ -227,7 +339,7 @@ class Constructor{
       
       System.out.println("Constructor: receiver port configured");
       
-      
+
       /* Loop to receive the information about the network */
       while(true){
         try{
@@ -259,51 +371,128 @@ class Constructor{
             /* Check for correct order */
             if(node_that_updated > node_that_sent){
               /* Check algorithm for separation character */
-              if(algorithm_id == 1 || algorithm_id == 2 || algorithm_id == 6){
+              if(algorithm_id == 1){
                 link_to_update = node_that_sent + "_" + node_that_updated;
-
+                /* If the order of the edge coordinates isnt correct, correct it */
+                if(graph.getEdge(link_to_update) == null){
+                  link_to_update = node_that_updated + "_" + node_that_sent;
+                  
+                }
+                node_to_update = node_that_updated + "";
+                
+              }
+              else if(algorithm_id == 2){
+                link_to_update = node_that_sent + "_" + node_that_updated;
+                node_to_update = node_that_updated + "";
+                
+              }
+              else if(algorithm_id == 3){
+                /* Make sure that the padding is done correctly */
+                link_to_update = String.format("%02d", node_that_sent) + "_" +  String.format("%02d", node_that_updated);
+                node_to_update = String.format("%02d", node_that_updated);
+                
+              }
+              else if(algorithm_id == 6){
+                link_to_update = node_that_updated + "_" + node_that_sent;
+                node_to_update = node_that_updated + "";
+                
               }
               else if(algorithm_id == 9){
                 /* Make sure that the padding is done correctly */
-                link_to_update = "(" + String.format("%04d", node_that_sent) + ";" +  String.format("%04d", node_that_updated) + ")";
+                link_to_update = String.format("%04d", node_that_sent) + "--" +  String.format("%04d", node_that_updated);
+                /* If the order of the edge coordinates isnt correct, correct it */
+                if(graph.getEdge(link_to_update) == null){
+                  link_to_update = String.format("%04d", node_that_updated) + "--" +  String.format("%04d", node_that_sent);
+                  
+                }
+                
                 node_to_update = String.format("%04d", node_that_updated);
-
+                
               }
               else if(algorithm_id == 10){
                 /* Make sure that the padding is done correctly */
                 link_to_update = "(" + String.format("%02d", node_that_sent) + ";" +  String.format("%02d", node_that_updated) + ")";
                 node_to_update = String.format("%02d", node_that_updated);
+                
+              }
+              else if(algorithm_id == 11){
+                link_to_update = node_that_sent + "-" + node_that_updated;
+                /* If the order of the edge coordinates isnt correct, correct it */
+                if(graph.getEdge(link_to_update) == null){
+                  link_to_update = node_that_updated + "-" + node_that_sent;
+                  
+                }
+                node_to_update = node_that_updated + "";
 
               }
               else{
                 link_to_update = node_that_sent + "-" + node_that_updated;
-
+                node_to_update = node_that_updated + "";
+                
               }
-
+              
             }
             else{
               /* Check algorithm for separation character */
-              if(algorithm_id == 1 || algorithm_id == 2 || algorithm_id == 6){
+              if(algorithm_id == 1){
                 link_to_update = node_that_updated + "_" + node_that_sent;
-
+                /* If the order of the edge coordinates isnt correct, correct it */
+                if(graph.getEdge(link_to_update) == null){
+                  link_to_update = node_that_sent + "_" + node_that_updated;
+                  
+                }
+                node_to_update = node_that_updated + "";
+                
+              }
+              else if(algorithm_id == 2){
+                link_to_update = node_that_updated + "_" + node_that_sent;
+                node_to_update = node_that_updated + "";
+                
+              }
+              else if(algorithm_id == 3){
+                /* Make sure that the padding is done correctly */
+                link_to_update = String.format("%02d", node_that_updated) + "_" +  String.format("%02d", node_that_sent);
+                node_to_update = String.format("%02d", node_that_updated);
+                
+              }
+              else if(algorithm_id == 6){
+                link_to_update = node_that_sent + "_" + node_that_updated;
+                node_to_update = node_that_updated + "";
+                
               }
               else if(algorithm_id == 9){
                 /* Make sure that the padding is done correctly */
-                link_to_update = "(" + String.format("%04d", node_that_updated) + ";" +  String.format("%04d", node_that_sent) + ")";
+                link_to_update = String.format("%04d", node_that_updated) + "--" +  String.format("%04d", node_that_sent);
+                /* If the order of the edge coordinates isnt correct, correct it */
+                if(graph.getEdge(link_to_update) == null){
+                  link_to_update = String.format("%04d", node_that_sent) + "--" +  String.format("%04d", node_that_updated);
+                  
+                }
                 node_to_update = String.format("%04d", node_that_updated);
-
+                
               }
               else if(algorithm_id == 10){
                 /* Make sure that the padding is done correctly */
                 link_to_update = "(" + String.format("%02d", node_that_updated) + ";" +  String.format("%02d", node_that_sent) + ")";
                 node_to_update = String.format("%02d", node_that_updated);
+                
+              }
+              else if(algorithm_id == 11){
+                link_to_update = node_that_updated + "-" + node_that_sent;
+                /* If the order of the edge coordinates isnt correct, correct it */
+                if(graph.getEdge(link_to_update) == null){
+                  link_to_update = node_that_sent + "-" + node_that_updated;
+                  
+                }
+                node_to_update = node_that_updated + "";
 
               }
               else{
                 link_to_update = node_that_updated + "-" + node_that_sent;
+                node_to_update = node_that_updated + "";
 
               }
-
+              
             }
             
             /* Do not act on the starter connection */
@@ -313,12 +502,12 @@ class Constructor{
               * Here we have the certainty that it exists so we progress forward */
               /* Coloring stuff 
               * Node */
-              node = graph.getNode(Integer.toString(node_that_updated));
-              node.addAttribute("ui.style", "fill-color: blue;");
+              node = graph.getNode(node_to_update);
+              node.addAttribute("ui.style", "fill-color: rgb(255,69,0); size: 15px;");
               /* Coloring stuff 
               * Link */
               edge = graph.getEdge(link_to_update);
-              edge.addAttribute("ui.style", "fill-color: rgb(255,69,0);");
+              edge.addAttribute("ui.style", "fill-color: rgb(255,069,000);");
               
               System.out.println("Constructor: updated node " + node_that_updated + " and link " + link_to_update);
             
@@ -347,7 +536,8 @@ class Constructor{
 
 /* @TODO 
 * Add a delay in the thread to simulate delays in comunications and make visualization easier 
-* FIX BUG: use Lobster w/ 1000 nodes to replicate fault */
+* Adapt for RBG message, including new id
+* FIX BUG: use Lobster w/ 1000 nodes to replicate fault OR d-mendes w 1000 nodes*/
 class Gossip_node extends Thread{
 
   private static final int main_port = 65535;
@@ -510,7 +700,7 @@ class Gossip_node extends Thread{
           
           /* Get message id */
           int new_message_id = Integer.parseInt(receive_data.replaceAll("\\D+", ""));
-          
+
           /* If the message is more recent */
           if (new_message_id > id){
             /* Send a positive acknowledge to the node that sent the message */
