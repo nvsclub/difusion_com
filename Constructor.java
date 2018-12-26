@@ -17,6 +17,7 @@ import org.graphstream.algorithm.generator.*;
 * */
 class Constructor{
 
+  private static final int port_offset = 50000;
   private static final int main_port = 65535;  
   private static final boolean enablePrints = false;  
 
@@ -202,7 +203,7 @@ class Constructor{
         }
         
         /* Initialize threads for the node */
-        Thread nodeThread = new Gossip_node(50000 + i, list_of_nodes_connected);
+        Thread nodeThread = new Gossip_node(port_offset + i, list_of_nodes_connected);
         nodeThread.start();
         
         list_of_nodes_connected.clear();
@@ -251,7 +252,7 @@ class Constructor{
         }
         
         /* Initialize threads for the node */
-        Thread nodeThread = new Gossip_node(50000 + i - 1, list_of_nodes_connected);
+        Thread nodeThread = new Gossip_node(port_offset + i - 1, list_of_nodes_connected);
         nodeThread.start();
         
         list_of_nodes_connected.clear();
@@ -299,7 +300,7 @@ class Constructor{
         }
         
         /* Initialize threads for the node */
-        Thread nodeThread = new Gossip_node(50000 + i, list_of_nodes_connected);
+        Thread nodeThread = new Gossip_node(port_offset + i, list_of_nodes_connected);
         nodeThread.start();
         
         list_of_nodes_connected.clear();
@@ -366,8 +367,8 @@ class Constructor{
             node_to_update = receive_data.substring(receive_data.length() - 16, receive_data.length() - 11);
 
             /* Guarantees that the order is correct in the link */
-            node_that_sent = Integer.parseInt(receive_data.substring(0, receive_data.length() - 16)) - 50000;
-            node_that_updated = Integer.parseInt(receive_data.substring(receive_data.length() - 16, receive_data.length() - 11)) - 50000;
+            node_that_sent = Integer.parseInt(receive_data.substring(0, receive_data.length() - 16)) - port_offset;
+            node_that_updated = Integer.parseInt(receive_data.substring(receive_data.length() - 16, receive_data.length() - 11)) - port_offset;
             
             color_to_update = receive_data.substring(receive_data.length() - 11, receive_data.length());
 
@@ -546,10 +547,11 @@ class Constructor{
 
 /* @TODO 
 * Add a delay in the thread to simulate delays in comunications and make visualization easier 
-* FIX BUG: use Lobster w/ 1000 nodes to replicate fault OR d-mendes w 1000 nodes
-* FIX BUG: graphs that should be complete arent being fully difused, replicate Barabasi (1) with 111 nodes*/
+* FIX BUG: use Lobster w/ 1000 nodes to replicate fault OR d-mendes w 1000 nodes */
 class Gossip_node extends Thread{
 
+  private static final long delay_per_cycle = 600;
+  private static final int port_offset = 50000;
   private static final int main_port = 65535;
   private static final boolean enablePrints = false;
 
@@ -642,9 +644,11 @@ class Gossip_node extends Thread{
         * If we receive a positive acknowledge our mission will be to keep difusing the message */
         if (receive_data.contains("YACK")) {
           if (missing_nodes > 0){
+            /* Sleep for visualization */
+            Thread.sleep(delay_per_cycle);
             /* Choose a random client from the stack of ports */
             int client_id = random_gen.nextInt(missing_nodes);
-            int client = port_list.get(client_id) + 50000;
+            int client = port_list.get(client_id) + port_offset;
             
             /* Setup the packet and send it
             * and propagates the message */
@@ -680,9 +684,11 @@ class Gossip_node extends Thread{
           if (missing_nodes > 0){
             /* Generate a random number between 0 and 100 and checks it it should continue difusing */
             if (random_gen.nextInt(100) < 90){
+              /* Sleep for visualization */
+              Thread.sleep(delay_per_cycle);
               /* Choose a random client from the stack of ports */
               int client_id = random_gen.nextInt(missing_nodes);
-              int client = port_list.get(client_id) + 50000;
+              int client = port_list.get(client_id) + port_offset;
               
               /* Setup the packet and send it
               * and propagates the message */
@@ -693,6 +699,7 @@ class Gossip_node extends Thread{
               /* Delete the port that was sent the message */
               missing_nodes--;
               port_list.remove(client_id);
+
               if(enablePrints){
                 System.out.println("Gossip node " + this.server_port + ": Received negative ACKNOWLEDGE - Continued transmission");
 
@@ -752,32 +759,42 @@ class Gossip_node extends Thread{
             port_list = new ArrayList<Integer>(this.client_ports);
             
             /* Remove the sender from the list */
-            if (port_list.contains(receive_packet.getPort())){
-              port_list.remove(port_list.indexOf(receive_packet.getPort()));
+            for(int i = 0; i < port_list.size(); i++){
+              if(port_list.get(i) + port_offset == receive_packet.getPort()){
+                port_list.remove(i);
+
+              }
 
             }
             
             missing_nodes = port_list.size();
             
-            /* Choose a random client from the stack of ports */
-            int client_id = random_gen.nextInt(missing_nodes);
-            int client = port_list.get(client_id) + 50000;
-            
-            /* Update the list */
-            missing_nodes--;
-            port_list.remove(client_id);
-            
-            /* Setup the packet and send it
-            * and propagates the message */
-            send_bytes = to_propagate.getBytes();
-            send_packet = new DatagramPacket(send_bytes, send_bytes.length, ip_address, client);
-            this.connection_socket.send(send_packet);
-            
+            /* Check if node is terminal 
+             * if not terminal, propagate message */
+            if(missing_nodes > 0){
+              /* Sleep for visualization */
+              Thread.sleep(delay_per_cycle);
+              /* Choose a random client from the stack of ports */
+              int client_id = random_gen.nextInt(missing_nodes);
+              int client = port_list.get(client_id) + port_offset;
+              
+              /* Update the list */
+              missing_nodes--;
+              port_list.remove(client_id);
+              
+              /* Setup the packet and send it
+              * and propagates the message */
+              send_bytes = to_propagate.getBytes();
+              send_packet = new DatagramPacket(send_bytes, send_bytes.length, ip_address, client);
+              this.connection_socket.send(send_packet);
+
+            }
+              
             if(enablePrints){
               System.out.println("Gossip node " + this.server_port + ": Message received from " + receive_packet.getPort());
-            
+              
             }
-
+            
             /* Send the information to the main */
             send_data = Integer.toString(receive_packet.getPort()) + Integer.toString(this.server_port) + receive_data.substring(receive_data.length() - 11, receive_data.length());
             send_bytes = send_data.getBytes();
