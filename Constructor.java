@@ -14,11 +14,11 @@ import org.graphstream.algorithm.generator.*;
 
 /* @TODO
 * Fix graphs on README.md
-* Implement accepting nodes RGB output
 * */
 class Constructor{
 
   private static final int main_port = 65535;  
+  private static final boolean enablePrints = false;  
 
   public static void main(String[] args){
     
@@ -26,15 +26,15 @@ class Constructor{
     Scanner sc = new Scanner(System.in);
     
     /* Get the graph generator to use */
-    System.out.println("Starter: Choose the graph to be generated:");
+    System.out.println("Starter: Choose the graph to be generated: (* not working properly)");
     System.out.println("1 - Barabasi Albert");
-    System.out.println("2 - Chain");
+    System.out.println("2 - Chain*");
     System.out.println("3 - Chvatal");
     System.out.println("4 - Dorogovtsev-Mendes");
-    System.out.println("5 - Flower Snark");
+    System.out.println("5 - Flower Snark*");
     System.out.println("6 - Full Graph");
-    System.out.println("7 - Full Grid");
-    System.out.println("8 - Incomplete Grid");
+    System.out.println("7 - Full Grid*");
+    System.out.println("8 - Incomplete Grid*");
     System.out.println("9 - Lobster");
     System.out.println("10 - Petersen");
     System.out.println("11 - RandomEuclidean");
@@ -57,7 +57,7 @@ class Constructor{
 
     }
     else if(algorithm_id == 2){
-      gen = new ChainGenerator(); /* ID x, links x_x */
+      gen = new ChainGenerator(); /* @TODO ID x, links x_x */
 
     }
     else if(algorithm_id == 3){
@@ -82,13 +82,12 @@ class Constructor{
     }
     else if(algorithm_id == 9){
       gen = new LobsterGenerator(); /* ID xxxx, links xxxx-xxxx */
-      /* @TODO This,and others, are generating errors in the node */
 
     }
     else if(algorithm_id == 10){
       /* This algorithm is a special case
        * it always has 10 nodes */
-      gen = new PetersenGraphGenerator(); /* @TODO ID xx, links (xx;xx) */
+      gen = new PetersenGraphGenerator(); /* ID xx, links (xx;xx) */
       
     }
     else if(algorithm_id == 11){
@@ -107,13 +106,16 @@ class Constructor{
     graph.display();
 
     /* Use for graph debugging */
-    for(Node n:graph) {
-      System.out.println(n.getId());
-    }
-    for(Edge e:graph.getEachEdge()) {
-      System.out.println(e.getId());
-    }
+    if(enablePrints){
+      for(Node n:graph) {
+        System.out.println(n.getId());
+      }
+      for(Edge e:graph.getEachEdge()) {
+        System.out.println(e.getId());
+      }
 
+    }
+      
 
     /* Get length of the ID for padding */
     int id_length = String.valueOf(size_of_graph).length();
@@ -143,9 +145,11 @@ class Constructor{
     size_of_graph = graph.getNodeCount();
     
     Edge edge;
+    if(enablePrints){
+      System.out.println("Constructor: graph initialized");
     
-    System.out.println("Constructor: graph initialized");
-    
+    }
+
     Pattern p = Pattern.compile("-?\\d+");
     Matcher m;
 
@@ -304,8 +308,9 @@ class Constructor{
 
     }
       
-    System.out.println("Constructor: all threads initalized");
-    
+    if(enablePrints){
+      System.out.println("Constructor: all threads initalized");
+    }
     
     /* Connection variables */
     DatagramSocket connection_socket;
@@ -332,13 +337,14 @@ class Constructor{
       /* Graphstream objects to update */
       String link_to_update = new String();
       String node_to_update = new String();
+      String color_to_update = new String();
       
       int node_that_sent = 0;
       int node_that_updated = 0;
 
-      
-      System.out.println("Constructor: receiver port configured");
-      
+      if(enablePrints){
+        System.out.println("Constructor: receiver port enabled");
+      }
 
       /* Loop to receive the information about the network */
       while(true){
@@ -357,12 +363,14 @@ class Constructor{
           
           /* Get the information received about the structure */
           if(receive_data.length() > 5){
-            node_to_update = receive_data.substring(receive_data.length() - 5);
+            node_to_update = receive_data.substring(receive_data.length() - 16, receive_data.length() - 11);
 
             /* Guarantees that the order is correct in the link */
-            node_that_sent = Integer.parseInt(receive_data.substring(0, receive_data.length() - 5)) - 50000;
-            node_that_updated = Integer.parseInt(receive_data.substring(receive_data.length() - 5)) - 50000;
+            node_that_sent = Integer.parseInt(receive_data.substring(0, receive_data.length() - 16)) - 50000;
+            node_that_updated = Integer.parseInt(receive_data.substring(receive_data.length() - 16, receive_data.length() - 11)) - 50000;
             
+            color_to_update = receive_data.substring(receive_data.length() - 11, receive_data.length());
+
             /* Change id in case ID = x+1 */
             if (algorithm_id == 3){
               node_that_sent++;
@@ -503,14 +511,16 @@ class Constructor{
               /* Coloring stuff 
               * Node */
               node = graph.getNode(node_to_update);
-              node.addAttribute("ui.style", "fill-color: rgb(255,69,0); size: 15px;");
+              node.addAttribute("ui.style", "fill-color: rgb(" + color_to_update + "); size: 15px;");
               /* Coloring stuff 
               * Link */
               edge = graph.getEdge(link_to_update);
-              edge.addAttribute("ui.style", "fill-color: rgb(255,069,000);");
+              edge.addAttribute("ui.style", "fill-color: rgb(" + color_to_update + ");");
               
-              System.out.println("Constructor: updated node " + node_that_updated + " and link " + link_to_update);
-            
+              if(enablePrints){
+                System.out.println("Constructor: updated node " + node_that_updated + " and link " + link_to_update);
+              }
+
             }
             
           }
@@ -536,11 +546,12 @@ class Constructor{
 
 /* @TODO 
 * Add a delay in the thread to simulate delays in comunications and make visualization easier 
-* Adapt for RBG message, including new id
-* FIX BUG: use Lobster w/ 1000 nodes to replicate fault OR d-mendes w 1000 nodes*/
+* FIX BUG: use Lobster w/ 1000 nodes to replicate fault OR d-mendes w 1000 nodes
+* FIX BUG: graphs that should be complete arent being fully difused, replicate Barabasi (1) with 111 nodes*/
 class Gossip_node extends Thread{
 
   private static final int main_port = 65535;
+  private static final boolean enablePrints = false;
 
   public DatagramSocket connection_socket;
   
@@ -578,8 +589,11 @@ class Gossip_node extends Thread{
     
     } 
     
-    System.out.println("Gossip node " + this.server_port + ": Initialized");
+    if(enablePrints){
+      System.out.println("Gossip node " + this.server_port + ": Initialized");
     
+    }
+
     /* Creating buffers
     * 
     * These byte buffers are needed because one of the DatagramPacket 
@@ -641,13 +655,19 @@ class Gossip_node extends Thread{
             /* Delete the port that was sent the message */
             missing_nodes--;
             port_list.remove(client_id);
+
+            if(enablePrints){
+              System.out.println("Gossip node " + this.server_port + ": Positive ACKNOWLEDGE received from " +  receive_packet.getPort());
             
-            System.out.println("Gossip node " + this.server_port + ": Positive ACKNOWLEDGE received from " +  receive_packet.getPort());
-            
+            }
+
           }
           else{
-            System.out.println("Gossip node " + this.server_port + ": Positive ACKNOWLEDGE received from " +  receive_packet.getPort());
-            System.out.println("Gossip node " + this.server_port + ": No more nodes");
+            if(enablePrints){
+              System.out.println("Gossip node " + this.server_port + ": Positive ACKNOWLEDGE received from " +  receive_packet.getPort());
+              System.out.println("Gossip node " + this.server_port + ": No more nodes");
+              
+            }
             
           }
           
@@ -673,20 +693,29 @@ class Gossip_node extends Thread{
               /* Delete the port that was sent the message */
               missing_nodes--;
               port_list.remove(client_id);
-              
-              System.out.println("Gossip node " + this.server_port + ": Received negative ACKNOWLEDGE - Continued transmission");
+              if(enablePrints){
+                System.out.println("Gossip node " + this.server_port + ": Received negative ACKNOWLEDGE - Continued transmission");
+
+              }
+
             }
             
             else{
-              System.out.println("Gossip node " + this.server_port + ": Received negative ACKNOWLEDGE - Stopped transmission");
+              if(enablePrints){
+                System.out.println("Gossip node " + this.server_port + ": Received negative ACKNOWLEDGE - Stopped transmission");
               
+              }
+
             }
             
           }
           else{
-            System.out.println("Gossip node " + this.server_port + ": Received negative ACKNOWLEDGE");
-            System.out.println("Gossip node " + this.server_port + ": No more nodes");
+            if(enablePrints){
+              System.out.println("Gossip node " + this.server_port + ": Received negative ACKNOWLEDGE");
+              System.out.println("Gossip node " + this.server_port + ": No more nodes");
             
+            }
+
           }
           
         }
@@ -699,7 +728,7 @@ class Gossip_node extends Thread{
         else if (receive_data.contains("DATA")) {
           
           /* Get message id */
-          int new_message_id = Integer.parseInt(receive_data.replaceAll("\\D+", ""));
+          int new_message_id = Integer.parseInt(receive_data.substring(0, receive_data.length() - 11).replaceAll("\\D+", ""));
 
           /* If the message is more recent */
           if (new_message_id > id){
@@ -744,11 +773,13 @@ class Gossip_node extends Thread{
             send_packet = new DatagramPacket(send_bytes, send_bytes.length, ip_address, client);
             this.connection_socket.send(send_packet);
             
-
-            System.out.println("Gossip node " + this.server_port + ": Message received from " + receive_packet.getPort());
+            if(enablePrints){
+              System.out.println("Gossip node " + this.server_port + ": Message received from " + receive_packet.getPort());
             
+            }
+
             /* Send the information to the main */
-            send_data = Integer.toString(receive_packet.getPort()) + Integer.toString(this.server_port);
+            send_data = Integer.toString(receive_packet.getPort()) + Integer.toString(this.server_port) + receive_data.substring(receive_data.length() - 11, receive_data.length());
             send_bytes = send_data.getBytes();
             send_packet = new DatagramPacket(send_bytes, send_bytes.length, receive_packet.getAddress(), main_port);
             this.connection_socket.send(send_packet);
@@ -761,9 +792,11 @@ class Gossip_node extends Thread{
             send_bytes = send_data.getBytes();
             send_packet = new DatagramPacket(send_bytes, send_bytes.length, receive_packet.getAddress(), receive_packet.getPort());
             this.connection_socket.send(send_packet);
+            if(enablePrints){
+              System.out.println("Gossip node " + this.server_port + ": Message received from " + receive_packet.getPort());
             
-            System.out.println("Gossip node " + this.server_port + ": Message received from " + receive_packet.getPort());
-            
+            }
+
           }
           
         }      
