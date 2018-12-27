@@ -12,6 +12,18 @@ import org.graphstream.graph.*;
 import org.graphstream.graph.implementations.*;
 import org.graphstream.algorithm.generator.*;
 
+
+/* CLASS DESCRIPTION  -  Constructor
+* This class runs the main of the program. It is responsible for building the network of nodes on top of a predifined graph.
+* 
+* STEPS:
+* 1 - Scan information from the terminal about the graph to be generated
+* 2 - Generate the graph according to the demands
+* 3 - Initialize all nodes of the network according to the graph
+* 4 - Setup connection to receive information from the nodes 
+* 5 - Monitor the nodes and change the graph according to changes on the network
+* 
+* */
 /* @TODO
 * Fix graphs on README.md
 * */
@@ -23,6 +35,8 @@ class Constructor{
 
   public static void main(String[] args){
     
+    /* STEP 1 - Scan information from the terminal about the graph to be generated */
+
     /* Initialize scanner to get data from terminal */
     Scanner sc = new Scanner(System.in);
     
@@ -41,15 +55,16 @@ class Constructor{
     System.out.println("11 - RandomEuclidean");
     int algorithm_id;
     algorithm_id = sc.nextInt();
-    sc.nextLine(); /* to skip the enter when entering the port */
+    sc.nextLine(); /* to skip the enter */
 
     /* Get the size of the graph to generate */
     System.out.println("Starter: Enter the size of the graph to be generated: ");
     int size_of_graph;
     size_of_graph = sc.nextInt();
-    sc.nextLine(); /* to skip the enter when entering the port */
+    sc.nextLine(); /* to skip the enter when */
     
-    /* Generating graph according to the demands */
+    /* STEP 2 - Generate the graph according to the demands */
+
     Graph graph = new SingleGraph("Graph");
     /* Defined as default in case of error */
     Generator gen = new DorogovtsevMendesGenerator(); /* ID x, links x-x */
@@ -138,22 +153,25 @@ class Constructor{
       node_zero = "0";
     }
     
-    /* Paint the node 0 */
+    /* Paint the node 0 (initial node) for identification */
     Node node = graph.getNode(node_zero);
     node.addAttribute("ui.style", "fill-color: rgb(0,100,255); size: 20px;");
     
     /* Get the size of the graph that might not match the size set */
     size_of_graph = graph.getNodeCount();
     
-    Edge edge;
     if(enablePrints){
       System.out.println("Constructor: graph initialized");
-    
+      
     }
-
+    
+    /* STEP 3 - Initialize all nodes of the network according to the graph */
+    
+    /* Classes that allow us to separate numbers from strings */
     Pattern p = Pattern.compile("-?\\d+");
     Matcher m;
-
+    
+    Edge edge;
     int[] node_pair = {0, 0};
     List<Integer> list_of_nodes_connected = new ArrayList<Integer>();
 
@@ -260,6 +278,7 @@ class Constructor{
       }
      
     }
+    /* For all the other algorithms */
     else{
       for(int i=0; i<size_of_graph; i++) {
         /* Get a list of nodes to which the node connects */
@@ -313,10 +332,12 @@ class Constructor{
       System.out.println("Constructor: all threads initalized");
     }
     
+    /* STEP 4 - Setup connection to receive information from the nodes */
+
     /* Connection variables */
     DatagramSocket connection_socket;
     InetAddress ip_address;
-    
+
     /* Setup socket to receive information */
     try{
       /* Get local IP address */
@@ -328,6 +349,8 @@ class Constructor{
       * Thats why we will use only one socket */
       connection_socket = new DatagramSocket(main_port);
       
+
+      /* STEP 5 - Monitor the nodes and change the graph according to changes on the network */
       
       /* Creating buffers */
       byte[] receive_bytes = new byte[1024];
@@ -346,7 +369,7 @@ class Constructor{
       if(enablePrints){
         System.out.println("Constructor: receiver port enabled");
       }
-
+      
       /* Loop to receive the information about the network */
       while(true){
         try{
@@ -362,7 +385,7 @@ class Constructor{
           connection_socket.receive(receive_packet);
           receive_data = new String(receive_packet.getData()).trim();
           
-          /* Process the information received about the structure */
+          /* Process the information received about the structure and modify the graph accordingly */
           if(receive_data.length() > 5){
             node_to_update = receive_data.substring(receive_data.length() - 16, receive_data.length() - 11);
 
@@ -504,7 +527,8 @@ class Constructor{
               
             }
             
-            /* Do not act on the starter connection */
+            /* Changing the connections afected *
+            * Do not act on the starter connection */
             if(node_that_sent != -1 && node_that_updated != -1){
               /* Good practices lesson:
               * Verify if the node/edge is found, else program will crash when it doesnt. 
@@ -545,6 +569,27 @@ class Constructor{
 
 }
 
+
+/* CLASS DESCRIPTION  -  Gossip_node
+* This class implements a node that should be run in a thread in order to simulate the newtork.
+* The class inputs are the socket id where it will create the server and the socket ids from the nodes 
+* that are connected to the node.
+*
+* STEPS:
+* 1 - Initialize the server
+* 2 - Monitor the messages received by the server and answer to them acording to the algorithm
+*
+* ALGORITHM
+* 1 - When a new message is received check if the message is a new message or an acknowledge (positive or negative).
+* 1.1 - If it is a positive acknowledge continue difunding the message
+* 1.2 - If it is a negative acknowledge
+* 1.2.1 - Continue difunding the message if the probability allows it to continue
+* 1.2.2 - Stop difunding the message
+* 1.3 - If it is a new message, verify if it has a more recent ID than the previously difunded message
+* 1.3.1 - If it does send a positive acknowledge and start difunding the new message
+* 1.3.2 - Else send a negative acknowledge and continue the normal behaviour.
+*
+* */
 /* @TODO 
 * */
 class Gossip_node extends Thread{
@@ -575,6 +620,8 @@ class Gossip_node extends Thread{
   }
   
   public void run(){ 
+    /* STEP 1 - Initialize the server */
+
     try{
       /* Get local IP address */
       this.ip_address = InetAddress.getByName("localhost");
@@ -621,6 +668,8 @@ class Gossip_node extends Thread{
     
     DatagramPacket send_packet;
     
+    /* STEP 2 - Monitor the messages received by the server and answer to them acording to the algorithm */
+
     while(true){
       try{
         /* Creating UDP packets to receive the messages

@@ -2,7 +2,10 @@ import java.net.*;
 import java.util.Scanner;
 import java.util.Random;
 
-
+/* CLASS DESCRIPTION  -  Starter
+* This class sends a UDP message to a local port in order to initiate the network
+*
+* */
 class Starter{
 
   private static final int port_offset = 60000;
