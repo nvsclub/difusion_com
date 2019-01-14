@@ -607,6 +607,7 @@ class Gossip_node extends Thread{
   public List<Integer> client_ports;
   
   public int id = 0;
+  public float k = 200;
   public int missing_nodes = 0;
 
   public Random random_gen = new Random();
@@ -730,8 +731,9 @@ class Gossip_node extends Thread{
         * if and only if the probabilities allow us to do so */
         else if (receive_data.contains("NACK")) {
           if (missing_nodes > 0){
+            k=k/2;
             /* Generate a random number between 0 and 100 and checks it it should continue difusing */
-            if (random_gen.nextInt(100) < 90){
+            if (random_gen.nextInt(100) < k){
               /* Sleep for visualization */
               Thread.sleep(delay_per_cycle);
               /* Choose a random client from the stack of ports */
