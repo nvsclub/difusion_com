@@ -46,12 +46,12 @@ class Starter{
         System.out.println("Enter '1' for DATA_2_255,000,000 (RED with ID 2)");
         System.out.println("Enter '2' for DATA_3_000,255,000 (GREEN with ID 3)");
         System.out.println("Enter '3' for DATA_4_000,000,255 (BLUE with ID 4)");
-        System.out.println("Enter '4' for DATA_5_000,255,128 (CYAN with ID 5)");
+        System.out.println("Enter '4' for DATA_5_000,100,000 (DARK GREEN with ID 5)");
         System.out.println("Enter '5' for DATA_6_255,000,128 (PINK with ID 6)");
         System.out.println("Enter '6' for DATA_7_102,051,000 (BROWN with ID 7)");
         System.out.println("Enter '7' for DATA_8_127,000,255 (PURPLE with ID 8)");
         System.out.println("Enter '8' for DATA_9_255,255,000 (YELLOW with ID 9)");
-        System.out.println("Enter '9' for DATA_10_000,128,255 (LBLUE with ID 10)");
+        System.out.println("Enter '9' for DATA_10_096,096,096 (GREY with ID 10)");
         String send_data = new String();
         send_data = sc.nextLine();
         if(send_data.isEmpty()){

@@ -35,11 +35,15 @@ class Constructor{
 
   public static void main(String[] args){
     
+    int algorithm_id;
+    int size_of_graph;
+
+    if (args.length != 2){
+
     /* STEP 1 - Scan information from the terminal about the graph to be generated */
 
     /* Initialize scanner to get data from terminal */
     Scanner sc = new Scanner(System.in);
-    
     /* Get the graph generator to use */
     System.out.println("Starter: Choose the graph to be generated: (* not working properly)");
     System.out.println("1 - Barabasi Albert");
@@ -53,16 +57,19 @@ class Constructor{
     System.out.println("9 - Lobster");
     System.out.println("10 - Petersen");
     System.out.println("11 - RandomEuclidean");
-    int algorithm_id;
     algorithm_id = sc.nextInt();
     sc.nextLine(); /* to skip the enter */
 
     /* Get the size of the graph to generate */
     System.out.println("Starter: Enter the size of the graph to be generated: ");
-    int size_of_graph;
     size_of_graph = sc.nextInt();
     sc.nextLine(); /* to skip the enter when */
-    
+
+    }
+    else{
+      algorithm_id = Integer.parseInt(args[0]);
+      size_of_graph = Integer.parseInt(args[1]);
+    }
     /* STEP 2 - Generate the graph according to the demands */
 
     Graph graph = new SingleGraph("Graph");
