@@ -35,40 +35,76 @@ class Constructor{
 
   public static void main(String[] args){
     
-    int algorithm_id;
-    int size_of_graph;
-
-    if (args.length != 2){
-
+    int algorithm_id = 0;
+    int size_of_graph = 0;
+    int timeout = 0;
+    int delay = 0;
+    String node_type = null;
+    
     /* STEP 1 - Scan information from the terminal about the graph to be generated */
+    if (args.length == 0){
 
-    /* Initialize scanner to get data from terminal */
-    Scanner sc = new Scanner(System.in);
-    /* Get the graph generator to use */
-    System.out.println("Starter: Choose the graph to be generated: (* not working properly)");
-    System.out.println("1 - Barabasi Albert");
-    System.out.println("2 - Chain*");
-    System.out.println("3 - Chvatal");
-    System.out.println("4 - Dorogovtsev-Mendes");
-    System.out.println("5 - Flower Snark*");
-    System.out.println("6 - Full Graph");
-    System.out.println("7 - Full Grid*");
-    System.out.println("8 - Incomplete Grid*");
-    System.out.println("9 - Lobster");
-    System.out.println("10 - Petersen");
-    System.out.println("11 - RandomEuclidean");
-    algorithm_id = sc.nextInt();
-    sc.nextLine(); /* to skip the enter */
+      /* Initialize scanner to get data from terminal */
+      Scanner sc = new Scanner(System.in);
 
-    /* Get the size of the graph to generate */
-    System.out.println("Starter: Enter the size of the graph to be generated: ");
-    size_of_graph = sc.nextInt();
-    sc.nextLine(); /* to skip the enter when */
+      /* Get the protocol to use */
+      System.out.println("Starter: Choose the protocol to use:");
+      System.out.println("GOSSIP");
+      System.out.println("PULLPUSH");
+      node_type = sc.nextLine();
+
+      /* Get the graph generator to use */
+      System.out.println("Starter: Choose the graph to be generated: (* not working properly)");
+      System.out.println("1 - Barabasi Albert");
+      System.out.println("2 - Chain*");
+      System.out.println("3 - Chvatal");
+      System.out.println("4 - Dorogovtsev-Mendes");
+      System.out.println("5 - Flower Snark*");
+      System.out.println("6 - Full Graph");
+      System.out.println("7 - Full Grid*");
+      System.out.println("8 - Incomplete Grid*");
+      System.out.println("9 - Lobster");
+      System.out.println("10 - Petersen");
+      System.out.println("11 - RandomEuclidean");
+      algorithm_id = sc.nextInt();
+      sc.nextLine(); /* to skip the enter */
+
+      /* Get the size of the graph to generate */
+      System.out.println("Starter: Enter the size of the graph to be generated: ");
+      size_of_graph = sc.nextInt();
+      sc.nextLine(); /* to skip the enter when */
+
+      /* Get the delay  */
+      System.out.println("Starter: Enter the delay: ");
+      delay = sc.nextInt();
+      sc.nextLine(); /* to skip the enter when */
+
+      /* Get the timeout  */
+      if(node_type.contains("PULLPUSH")){
+        System.out.println("Starter: Enter the timeout: ");
+        timeout = sc.nextInt();
+        sc.nextLine(); /* to skip the enter when */
+
+      }
+
+
+
 
     }
-    else{
-      algorithm_id = Integer.parseInt(args[0]);
-      size_of_graph = Integer.parseInt(args[1]);
+    else if (args[0].contains("GOSSIP")){
+      node_type = args[0];
+      algorithm_id = Integer.parseInt(args[1]);
+      size_of_graph = Integer.parseInt(args[2]);
+      delay = Integer.parseInt(args[3]);
+    
+    }
+    else if (args[0].contains("PUSHPULL")){
+      node_type = args[0];
+      algorithm_id = Integer.parseInt(args[1]);
+      size_of_graph = Integer.parseInt(args[2]);
+      delay = Integer.parseInt(args[3]);
+      timeout = Integer.parseInt(args[4]);
+
     }
     /* STEP 2 - Generate the graph according to the demands */
 
@@ -228,8 +264,16 @@ class Constructor{
         }
         
         /* Initialize threads for the node */
-        Thread nodeThread = new Gossip_node(port_offset + i, list_of_nodes_connected);
-        nodeThread.start();
+        if(node_type.contains("GOSSIP")){
+          Thread nodeThread = new Gossip_node(port_offset + i, list_of_nodes_connected, delay);
+          nodeThread.start();
+          
+        }
+        else if(node_type.contains("PUSHPULL")){
+          Thread nodeThread = new PushPull_node(port_offset + i, list_of_nodes_connected, timeout, delay);
+          nodeThread.start();
+
+        }
         
         list_of_nodes_connected.clear();
         
@@ -277,8 +321,16 @@ class Constructor{
         }
         
         /* Initialize threads for the node */
-        Thread nodeThread = new Gossip_node(port_offset + i - 1, list_of_nodes_connected);
-        nodeThread.start();
+        if(node_type.contains("GOSSIP")){
+          Thread nodeThread = new Gossip_node(port_offset + i - 1, list_of_nodes_connected, delay);
+          nodeThread.start();
+          
+        }
+        else if(node_type.contains("PUSHPULL")){
+          Thread nodeThread = new PushPull_node(port_offset + i - 1, list_of_nodes_connected, timeout, delay);
+          nodeThread.start();
+
+        }
         
         list_of_nodes_connected.clear();
         
@@ -326,8 +378,16 @@ class Constructor{
         }
         
         /* Initialize threads for the node */
-        Thread nodeThread = new Gossip_node(port_offset + i, list_of_nodes_connected);
-        nodeThread.start();
+        if(node_type.contains("GOSSIP")){
+          Thread nodeThread = new Gossip_node(port_offset + i, list_of_nodes_connected, delay);
+          nodeThread.start();
+          
+        }
+        else if(node_type.contains("PUSHPULL")){
+          Thread nodeThread = new PushPull_node(port_offset + i, list_of_nodes_connected, timeout, delay);
+          nodeThread.start();
+
+        }
         
         list_of_nodes_connected.clear();
         
@@ -601,7 +661,7 @@ class Constructor{
 * */
 class Gossip_node extends Thread{
 
-  private static final long delay_per_cycle = 600;
+  public long delay_per_cycle = 600;
   private static final int port_offset = 60000;
   private static final int main_port = 65535;
   private static final boolean enablePrints = false;
@@ -621,9 +681,10 @@ class Gossip_node extends Thread{
 
   /* This initializing method allows us to send arguments to the class
    * whenever we are initalizing a new thread */
-  public Gossip_node(int server_port, List<Integer> client_ports){
+  public Gossip_node(int server_port, List<Integer> client_ports, int delay){
     this.server_port = server_port;
     this.client_ports= new ArrayList<Integer>(client_ports);
+    this.delay_per_cycle = delay;
 
   }
   
@@ -884,3 +945,166 @@ class Gossip_node extends Thread{
   }
     
 }
+
+
+class PushPull_node extends Thread{
+
+  public long delay_per_cycle = 600;
+  private static final int port_offset = 60000;
+  private static final int main_port = 65535;
+  private static final boolean enablePrints = false;
+
+  public DatagramSocket connection_socket;
+  
+  public InetAddress ip_address;
+
+  public int server_port;
+  public List<Integer> client_ports;
+  public int timeout;
+  
+  public int id = 0;
+  public int missing_nodes = 0;
+
+  public Random random_gen = new Random();
+
+  /* This initializing method allows us to send arguments to the class
+   * whenever we are initalizing a new thread */
+  public PushPull_node(int server_port, List<Integer> client_ports, long delay, int timeout){
+    this.server_port = server_port;
+    this.client_ports= new ArrayList<Integer>(client_ports);
+    this.delay_per_cycle = delay;
+    this.timeout = timeout;
+
+  }
+  
+  public void run(){ 
+    /* STEP 1 - Initialize the server */
+
+    try{
+      /* Get local IP address */
+      this.ip_address = InetAddress.getByName("localhost");
+      
+      /* Initialize sockets
+       * Having a client socket makes it so that we cannot naturally identify
+       * the node who sent the message to us 
+       * Thats why we will use only one socket */
+      this.connection_socket = new DatagramSocket(this.server_port);
+      this.connection_socket.setSoTimeout(this.timeout);
+      
+    } catch (Exception e) { 
+      e.printStackTrace(); 
+    
+    } 
+    
+    if(enablePrints){
+      System.out.println("Gossip node " + this.server_port + ": Initialized");
+    
+    }
+
+    /* Creating buffers
+    * 
+    * These byte buffers are needed because one of the DatagramPacket 
+    * arguments is a pointer for an array of bytes where the packet data
+    * will be stored  */
+    byte[] send_bytes = new byte[1024];
+    byte[] receive_bytes = new byte[1024];
+    
+    /* Creating the strings to read the data */
+    String send_data = new String(); 
+    String receive_data = new String();   
+    
+    /* Create a list with the ports where the message was not sent yet
+    * 
+    * We use a list here because it uses dinamic memory
+    * Had we used a normal array it would be way more complex to remove
+    * a element because it statically allocates memory*/
+    List<Integer> port_list = new ArrayList<Integer>();
+    /* Populate the list with the clients */
+    port_list = new ArrayList<Integer>(this.client_ports);
+
+    missing_nodes = port_list.size();
+
+    /* Saver for the message to be propagated */
+    String to_propagate = new String();
+    
+    DatagramPacket send_packet;
+    
+    /* STEP 2 - Monitor the messages received by the server and answer to them acording to the algorithm */
+
+    while(true){
+      /* Event triggered */
+      try{
+        /* Creating UDP packets to receive the messages
+        * 
+        * These packets are responsible in receiving the messages and storing it in memory
+        * They are needed in order to store the data received in the socket */
+        DatagramPacket receive_packet = new DatagramPacket(receive_bytes, receive_bytes.length);
+        /* Receiving the message and transforming it into a string
+         * 
+         * The data is received from the packet into a bytes array and then we typecast it 
+         * into a string in order to be readable */
+        connection_socket.receive(receive_packet);
+        receive_data = new String(receive_packet.getData()).trim();
+
+        if (receive_data.contains("DATA")) {
+          int new_message_id = Integer.parseInt(receive_data.substring(0, receive_data.length() - 11).replaceAll("\\D+", ""));
+
+          /* If receive a newer message */
+          if (new_message_id > id){
+            to_propagate = receive_data;
+
+            /* Send the information to the main */
+            send_data = Integer.toString(receive_packet.getPort()) + Integer.toString(this.server_port) + receive_data.substring(receive_data.length() - 11, receive_data.length());
+            send_bytes = send_data.getBytes();
+            send_packet = new DatagramPacket(send_bytes, send_bytes.length, receive_packet.getAddress(), main_port);
+            this.connection_socket.send(send_packet);
+
+          }
+
+          /* If received a older message */
+          else if (new_message_id < id) {
+            /* Send newer message */
+            send_data = to_propagate;
+            send_bytes = send_data.getBytes();
+            send_packet = new DatagramPacket(send_bytes, send_bytes.length, receive_packet.getAddress(), receive_packet.getPort());
+            this.connection_socket.send(send_packet);
+
+          }
+
+        }
+         
+        
+      } 
+      /* Time triggered */
+      catch (SocketTimeoutException f){
+        if(missing_nodes != 0){
+
+          int client_id = random_gen.nextInt(missing_nodes);
+          int client = port_list.get(client_id) + port_offset;
+          
+          /* Send message to a random node */
+          try{
+            send_data = to_propagate;
+            send_bytes = send_data.getBytes();
+            send_packet = new DatagramPacket(send_bytes, send_bytes.length, this.ip_address, client);
+            this.connection_socket.send(send_packet);
+            
+          }catch(Exception e){
+            System.exit(1);
+          }
+          
+        }
+          
+      }
+        
+      catch (Exception e) { 
+        e.printStackTrace(); 
+      } 
+      
+    }
+      
+  }
+    
+}
+
+
