@@ -76,7 +76,7 @@ class Starter{
             
           }
           else if(send_data.contains("4")){
-            send_data = "DATA_5_000,255,128";
+            send_data = "DATA_5_000,100,000";
             
           }
           else if(send_data.contains("5")){
@@ -96,7 +96,7 @@ class Starter{
             
           }
           else if(send_data.contains("9")){
-            send_data = "DATA_10_000,128,255";
+            send_data = "DATA_10_096,096,096";
             
           }
           

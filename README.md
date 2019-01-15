@@ -1,13 +1,18 @@
 # Difusion Communication
 
+# Usage
+java Constructor TYPE algorihm_id graph_size delay timeout
+
+(gossip doesn't use timeout)
+
 ## Fully functional graphs
-### Barabasi Albert
-### Dorogovtsev-Mendes
-### Chvatal
-### Full Graph
-### Lobster
-### Petersen
-### RandomEuclidean
+### 1 - Barabasi Albert
+### 3 - Chvatal
+### 4 - Dorogovtsev-Mendes
+### 6 - Full Graph
+### 9 - Lobster
+### 10- Petersen
+### 11- RandomEuclidean
 
 ## Non functional graphs
 ### Chain
