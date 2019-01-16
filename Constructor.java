@@ -3,6 +3,7 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.Random;
 import java.util.Scanner;
+import java.io.PrintWriter;
 
 import java.util.regex.Pattern;
 import java.util.regex.Matcher;
@@ -50,6 +51,8 @@ class Constructor{
       /* Get the protocol to use */
       System.out.println("Starter: Choose the protocol to use:");
       System.out.println("GOSSIP");
+      System.out.println("PUSH");
+      System.out.println("PULL");
       System.out.println("PULLPUSH");
       node_type = sc.nextLine();
 
@@ -126,7 +129,7 @@ class Constructor{
 
     Graph graph = new SingleGraph("Graph");
     /* Defined as default in case of error */
-    Generator gen = new DorogovtsevMendesGenerator(); /* ID x, links x-x */
+    BaseGenerator gen = new DorogovtsevMendesGenerator(); /* ID x, links x-x */
     if(algorithm_id == 1){
       gen = new BarabasiAlbertGenerator(); /* ID x, links x_x */
 
@@ -169,6 +172,7 @@ class Constructor{
       gen = new RandomEuclideanGenerator(); /* ID x, links x-x */
 
     }
+    gen.setRandomSeed(0);
 
     gen.addSink(graph);
     gen.begin();
@@ -479,10 +483,23 @@ class Constructor{
       int node_that_sent = 0;
       int node_that_updated = 0;
 
+      int comunication_counter = 0;
+      int pos_ack_counter = 0;
+      int neg_ack_counter = 0;
+      int request_counter = 0;
+      int message_counter = 0;
+      int difunded_nodes = 0;
+      long difusion_end_timer = 0;
+      long difusion_starting_timer = 0;
+
+
       if(enablePrints){
         System.out.println("Constructor: receiver port enabled");
       }
       
+      /* Initializing files for output */
+      PrintWriter writer = null;
+
       /* Loop to receive the information about the network */
       while(true){
         try{
@@ -499,168 +516,213 @@ class Constructor{
           receive_data = new String(receive_packet.getData()).trim();
           
           /* Process the information received about the structure and modify the graph accordingly */
-          if(receive_data.length() > 5){
-            node_to_update = receive_data.substring(receive_data.length() - 16, receive_data.length() - 11);
+          if(receive_data.contains("COM")){
+            comunication_counter++;
 
-            /* Guarantees that the order is correct in the link */
-            node_that_sent = Integer.parseInt(receive_data.substring(0, receive_data.length() - 16)) - port_offset;
-            node_that_updated = Integer.parseInt(receive_data.substring(receive_data.length() - 16, receive_data.length() - 11)) - port_offset;
-            
-            color_to_update = receive_data.substring(receive_data.length() - 11, receive_data.length());
-
-            /* Change id in case ID = x+1 */
-            if (algorithm_id == 3){
-              node_that_sent++;
-              node_that_updated++;
+            if(receive_data.contains("COMY")){
+              pos_ack_counter++;
             }
-            /* Check for correct order */
-            if(node_that_updated > node_that_sent){
-              /* Check algorithm for separation character */
-              if(algorithm_id == 1){
-                link_to_update = node_that_sent + "_" + node_that_updated;
-                /* If the order of the edge coordinates isnt correct, correct it */
-                if(graph.getEdge(link_to_update) == null){
-                  link_to_update = node_that_updated + "_" + node_that_sent;
-                  
-                }
-                node_to_update = node_that_updated + "";
-                
-              }
-              else if(algorithm_id == 2){
-                link_to_update = node_that_sent + "_" + node_that_updated;
-                node_to_update = node_that_updated + "";
-                
-              }
-              else if(algorithm_id == 3){
-                /* Make sure that the padding is done correctly */
-                link_to_update = String.format("%02d", node_that_sent) + "_" +  String.format("%02d", node_that_updated);
-                node_to_update = String.format("%02d", node_that_updated);
-                
-              }
-              else if(algorithm_id == 6){
-                link_to_update = node_that_updated + "_" + node_that_sent;
-                node_to_update = node_that_updated + "";
-                
-              }
-              else if(algorithm_id == 9){
-                /* Make sure that the padding is done correctly */
-                link_to_update = String.format("%04d", node_that_sent) + "--" +  String.format("%04d", node_that_updated);
-                /* If the order of the edge coordinates isnt correct, correct it */
-                if(graph.getEdge(link_to_update) == null){
-                  link_to_update = String.format("%04d", node_that_updated) + "--" +  String.format("%04d", node_that_sent);
-                  
-                }
-                
-                node_to_update = String.format("%04d", node_that_updated);
-                
-              }
-              else if(algorithm_id == 10){
-                /* Make sure that the padding is done correctly */
-                link_to_update = "(" + String.format("%02d", node_that_sent) + ";" +  String.format("%02d", node_that_updated) + ")";
-                node_to_update = String.format("%02d", node_that_updated);
-                
-              }
-              else if(algorithm_id == 11){
-                link_to_update = node_that_sent + "-" + node_that_updated;
-                /* If the order of the edge coordinates isnt correct, correct it */
-                if(graph.getEdge(link_to_update) == null){
-                  link_to_update = node_that_updated + "-" + node_that_sent;
-                  
-                }
-                node_to_update = node_that_updated + "";
+            else if(receive_data.contains("COMN")){
+              neg_ack_counter++;
+            }
+            else if(receive_data.contains("COMN")){
+              request_counter++;
+            }
 
-              }
-              else{
-                link_to_update = node_that_sent + "-" + node_that_updated;
-                node_to_update = node_that_updated + "";
-                
-              }
-              
+
+            /* GOSSIP - Communication timer, comunication counter, latest time of propagation, number of nodes spread, number of positive ack, number of negative ack, number of requests */
+            /* Entropy - Communication timer, comunication counter, latest time of propagation, number of nodes spread, number of positive ack, useless messagens, number of requests */
+            if(difunded_nodes != size_of_graph - 1 && System.currentTimeMillis()-difusion_starting_timer < 20000){
+              writer.println(Long.toString(System.currentTimeMillis()-difusion_starting_timer) + "," + Integer.toString(comunication_counter) + "," + Long.toString(difusion_end_timer-difusion_starting_timer) + "," + Integer.toString(difunded_nodes) + "," + Integer.toString(pos_ack_counter) + "," + Integer.toString(neg_ack_counter) + "," + Integer.toString(request_counter));
+              //System.out.println(Long.toString(System.currentTimeMillis()-difusion_starting_timer) + "," + Integer.toString(comunication_counter) + "," + Long.toString(difusion_end_timer-difusion_starting_timer) + "," + Integer.toString(difunded_nodes) + "," + Integer.toString(pos_ack_counter) + "," + Integer.toString(neg_ack_counter) + "," + Integer.toString(request_counter));
+
             }
             else{
-              /* Check algorithm for separation character */
-              if(algorithm_id == 1){
-                link_to_update = node_that_updated + "_" + node_that_sent;
-                /* If the order of the edge coordinates isnt correct, correct it */
-                if(graph.getEdge(link_to_update) == null){
-                  link_to_update = node_that_sent + "_" + node_that_updated;
-                  
-                }
-                node_to_update = node_that_updated + "";
-                
-              }
-              else if(algorithm_id == 2){
-                link_to_update = node_that_updated + "_" + node_that_sent;
-                node_to_update = node_that_updated + "";
-                
-              }
-              else if(algorithm_id == 3){
-                /* Make sure that the padding is done correctly */
-                link_to_update = String.format("%02d", node_that_updated) + "_" +  String.format("%02d", node_that_sent);
-                node_to_update = String.format("%02d", node_that_updated);
-                
-              }
-              else if(algorithm_id == 6){
-                link_to_update = node_that_sent + "_" + node_that_updated;
-                node_to_update = node_that_updated + "";
-                
-              }
-              else if(algorithm_id == 9){
-                /* Make sure that the padding is done correctly */
-                link_to_update = String.format("%04d", node_that_updated) + "--" +  String.format("%04d", node_that_sent);
-                /* If the order of the edge coordinates isnt correct, correct it */
-                if(graph.getEdge(link_to_update) == null){
-                  link_to_update = String.format("%04d", node_that_sent) + "--" +  String.format("%04d", node_that_updated);
-                  
-                }
-                node_to_update = String.format("%04d", node_that_updated);
-                
-              }
-              else if(algorithm_id == 10){
-                /* Make sure that the padding is done correctly */
-                link_to_update = "(" + String.format("%02d", node_that_updated) + ";" +  String.format("%02d", node_that_sent) + ")";
-                node_to_update = String.format("%02d", node_that_updated);
-                
-              }
-              else if(algorithm_id == 11){
-                link_to_update = node_that_updated + "-" + node_that_sent;
-                /* If the order of the edge coordinates isnt correct, correct it */
-                if(graph.getEdge(link_to_update) == null){
-                  link_to_update = node_that_sent + "-" + node_that_updated;
-                  
-                }
-                node_to_update = node_that_updated + "";
+              writer.close();
+            }
 
+          }
+          else{
+            comunication_counter++;
+
+            if(receive_data.length() > 5){
+              node_to_update = receive_data.substring(receive_data.length() - 16, receive_data.length() - 11);
+
+              /* Guarantees that the order is correct in the link */
+              node_that_sent = Integer.parseInt(receive_data.substring(0, receive_data.length() - 16)) - port_offset;
+              node_that_updated = Integer.parseInt(receive_data.substring(receive_data.length() - 16, receive_data.length() - 11)) - port_offset;
+              
+              color_to_update = receive_data.substring(receive_data.length() - 11, receive_data.length());
+
+              /* Change id in case ID = x+1 */
+              if (algorithm_id == 3){
+                node_that_sent++;
+                node_that_updated++;
+              }
+              /* Check for correct order */
+              if(node_that_updated > node_that_sent){
+                /* Check algorithm for separation character */
+                if(algorithm_id == 1){
+                  link_to_update = node_that_sent + "_" + node_that_updated;
+                  /* If the order of the edge coordinates isnt correct, correct it */
+                  if(graph.getEdge(link_to_update) == null){
+                    link_to_update = node_that_updated + "_" + node_that_sent;
+                    
+                  }
+                  node_to_update = node_that_updated + "";
+                  
+                }
+                else if(algorithm_id == 2){
+                  link_to_update = node_that_sent + "_" + node_that_updated;
+                  node_to_update = node_that_updated + "";
+                  
+                }
+                else if(algorithm_id == 3){
+                  /* Make sure that the padding is done correctly */
+                  link_to_update = String.format("%02d", node_that_sent) + "_" +  String.format("%02d", node_that_updated);
+                  node_to_update = String.format("%02d", node_that_updated);
+                  
+                }
+                else if(algorithm_id == 6){
+                  link_to_update = node_that_updated + "_" + node_that_sent;
+                  node_to_update = node_that_updated + "";
+                  
+                }
+                else if(algorithm_id == 9){
+                  /* Make sure that the padding is done correctly */
+                  link_to_update = String.format("%04d", node_that_sent) + "--" +  String.format("%04d", node_that_updated);
+                  /* If the order of the edge coordinates isnt correct, correct it */
+                  if(graph.getEdge(link_to_update) == null){
+                    link_to_update = String.format("%04d", node_that_updated) + "--" +  String.format("%04d", node_that_sent);
+                    
+                  }
+                  
+                  node_to_update = String.format("%04d", node_that_updated);
+                  
+                }
+                else if(algorithm_id == 10){
+                  /* Make sure that the padding is done correctly */
+                  link_to_update = "(" + String.format("%02d", node_that_sent) + ";" +  String.format("%02d", node_that_updated) + ")";
+                  node_to_update = String.format("%02d", node_that_updated);
+                  
+                }
+                else if(algorithm_id == 11){
+                  link_to_update = node_that_sent + "-" + node_that_updated;
+                  /* If the order of the edge coordinates isnt correct, correct it */
+                  if(graph.getEdge(link_to_update) == null){
+                    link_to_update = node_that_updated + "-" + node_that_sent;
+                    
+                  }
+                  node_to_update = node_that_updated + "";
+
+                }
+                else{
+                  link_to_update = node_that_sent + "-" + node_that_updated;
+                  node_to_update = node_that_updated + "";
+                  
+                }
+                
               }
               else{
-                link_to_update = node_that_updated + "-" + node_that_sent;
-                node_to_update = node_that_updated + "";
+                /* Check algorithm for separation character */
+                if(algorithm_id == 1){
+                  link_to_update = node_that_updated + "_" + node_that_sent;
+                  /* If the order of the edge coordinates isnt correct, correct it */
+                  if(graph.getEdge(link_to_update) == null){
+                    link_to_update = node_that_sent + "_" + node_that_updated;
+                    
+                  }
+                  node_to_update = node_that_updated + "";
+                  
+                }
+                else if(algorithm_id == 2){
+                  link_to_update = node_that_updated + "_" + node_that_sent;
+                  node_to_update = node_that_updated + "";
+                  
+                }
+                else if(algorithm_id == 3){
+                  /* Make sure that the padding is done correctly */
+                  link_to_update = String.format("%02d", node_that_updated) + "_" +  String.format("%02d", node_that_sent);
+                  node_to_update = String.format("%02d", node_that_updated);
+                  
+                }
+                else if(algorithm_id == 6){
+                  link_to_update = node_that_sent + "_" + node_that_updated;
+                  node_to_update = node_that_updated + "";
+                  
+                }
+                else if(algorithm_id == 9){
+                  /* Make sure that the padding is done correctly */
+                  link_to_update = String.format("%04d", node_that_updated) + "--" +  String.format("%04d", node_that_sent);
+                  /* If the order of the edge coordinates isnt correct, correct it */
+                  if(graph.getEdge(link_to_update) == null){
+                    link_to_update = String.format("%04d", node_that_sent) + "--" +  String.format("%04d", node_that_updated);
+                    
+                  }
+                  node_to_update = String.format("%04d", node_that_updated);
+                  
+                }
+                else if(algorithm_id == 10){
+                  /* Make sure that the padding is done correctly */
+                  link_to_update = "(" + String.format("%02d", node_that_updated) + ";" +  String.format("%02d", node_that_sent) + ")";
+                  node_to_update = String.format("%02d", node_that_updated);
+                  
+                }
+                else if(algorithm_id == 11){
+                  link_to_update = node_that_updated + "-" + node_that_sent;
+                  /* If the order of the edge coordinates isnt correct, correct it */
+                  if(graph.getEdge(link_to_update) == null){
+                    link_to_update = node_that_sent + "-" + node_that_updated;
+                    
+                  }
+                  node_to_update = node_that_updated + "";
 
+                }
+                else{
+                  link_to_update = node_that_updated + "-" + node_that_sent;
+                  node_to_update = node_that_updated + "";
+
+                }
+                
               }
               
-            }
-            
-            /* Changing the connections afected *
-            * Do not act on the starter connection */
-            if(node_that_sent != -1 && node_that_updated != -1){
-              /* Good practices lesson:
-              * Verify if the node/edge is found, else program will crash when it doesnt. 
-              * Here we have the certainty that it exists so we progress forward */
-              /* Coloring stuff 
-              * Node */
-              node = graph.getNode(node_to_update);
-              node.addAttribute("ui.style", "fill-color: rgb(" + color_to_update + "); size: 15px;");
-              /* Coloring stuff 
-              * Link */
-              edge = graph.getEdge(link_to_update);
-              edge.addAttribute("ui.style", "fill-color: rgb(" + color_to_update + "); size: 3px;");
-              
-              if(enablePrints){
-                System.out.println("Constructor: updated node " + node_that_updated + " and link " + link_to_update);
+              /* Changing the connections afected *
+              * Do not act on the starter connection */
+              if(node_that_sent != -1 && node_that_updated != -1){
+                /* Update timer */
+                difusion_end_timer = System.currentTimeMillis();
+                difunded_nodes++;
+
+                /* Good practices lesson:
+                * Verify if the node/edge is found, else program will crash when it doesnt. 
+                * Here we have the certainty that it exists so we progress forward */
+                /* Coloring stuff 
+                * Node */
+                node = graph.getNode(node_to_update);
+                node.addAttribute("ui.style", "fill-color: rgb(" + color_to_update + "); size: 15px;");
+                /* Coloring stuff 
+                * Link */
+                edge = graph.getEdge(link_to_update);
+                edge.addAttribute("ui.style", "fill-color: rgb(" + color_to_update + "); size: 3px;");
+                
+                if(enablePrints){
+                  System.out.println("Constructor: updated node " + node_that_updated + " and link " + link_to_update);
+                }
+
               }
+              /* New connection, restart the counter and timer and file */
+              else{
+                message_counter++;
+                writer = new PrintWriter("data/data_" + Integer.toString(message_counter) + ".txt", "UTF-8");
+                comunication_counter = 0;
+                difunded_nodes = 0;
+                difusion_starting_timer = System.currentTimeMillis();
+                difusion_end_timer = difusion_starting_timer;
+                
+              }
+              
 
             }
-            
           }
           
           
@@ -837,6 +899,12 @@ class Gossip_node extends Thread{
             }
             
           }
+
+          /* Send the information to the main */
+          send_data = "COMY";
+          send_bytes = send_data.getBytes();
+          send_packet = new DatagramPacket(send_bytes, send_bytes.length, receive_packet.getAddress(), main_port);
+          this.connection_socket.send(send_packet);
           
         }
         
@@ -888,6 +956,12 @@ class Gossip_node extends Thread{
             }
 
           }
+
+          /* Send the information to the main */
+          send_data = "COMN";
+          send_bytes = send_data.getBytes();
+          send_packet = new DatagramPacket(send_bytes, send_bytes.length, receive_packet.getAddress(), main_port);
+          this.connection_socket.send(send_packet);
           
         }
         
@@ -1094,10 +1168,12 @@ class PushPull_node extends Thread{
 
         if (receive_data.contains("DATA")) {
           int new_message_id = Integer.parseInt(receive_data.substring(0, receive_data.length() - 11).replaceAll("\\D+", ""));
-
+          
           /* If receive a newer message */
           if (new_message_id > id){
             to_propagate = receive_data;
+
+            id = new_message_id;
 
             /* Send the information to the main */
             send_data = Integer.toString(receive_packet.getPort()) + Integer.toString(this.server_port) + receive_data.substring(receive_data.length() - 11, receive_data.length());
@@ -1115,6 +1191,19 @@ class PushPull_node extends Thread{
             send_packet = new DatagramPacket(send_bytes, send_bytes.length, receive_packet.getAddress(), receive_packet.getPort());
             this.connection_socket.send(send_packet);
 
+            /* Send the information to the main */
+            send_data = "COMY";
+            send_bytes = send_data.getBytes();
+            send_packet = new DatagramPacket(send_bytes, send_bytes.length, receive_packet.getAddress(), main_port);
+            this.connection_socket.send(send_packet);
+
+          }
+          else{
+            /* Send the information to the main */
+            send_data = "COMN";
+            send_bytes = send_data.getBytes();
+            send_packet = new DatagramPacket(send_bytes, send_bytes.length, receive_packet.getAddress(), main_port);
+            this.connection_socket.send(send_packet);
           }
 
         }
@@ -1260,12 +1349,21 @@ class Push_node extends Thread{
           if (new_message_id > id){
             to_propagate = receive_data;
             
+            id = new_message_id;
+            
             /* Send the information to the main */
             send_data = Integer.toString(receive_packet.getPort()) + Integer.toString(this.server_port) + receive_data.substring(receive_data.length() - 11, receive_data.length());
             send_bytes = send_data.getBytes();
             send_packet = new DatagramPacket(send_bytes, send_bytes.length, receive_packet.getAddress(), main_port);
             this.connection_socket.send(send_packet);
             
+          }
+          else{
+            /* Send the information to the main */
+            send_data = "COMN";
+            send_bytes = send_data.getBytes();
+            send_packet = new DatagramPacket(send_bytes, send_bytes.length, receive_packet.getAddress(), main_port);
+            this.connection_socket.send(send_packet);
           }
 
         }
@@ -1411,6 +1509,8 @@ class Pull_node extends Thread{
           if (new_message_id > id){
             to_propagate = receive_data;
 
+            id = new_message_id;
+
             /* Send the information to the main */
             send_data = Integer.toString(receive_packet.getPort()) + Integer.toString(this.server_port) + receive_data.substring(receive_data.length() - 11, receive_data.length());
             send_bytes = send_data.getBytes();
@@ -1427,6 +1527,20 @@ class Pull_node extends Thread{
             send_packet = new DatagramPacket(send_bytes, send_bytes.length, receive_packet.getAddress(), receive_packet.getPort());
             this.connection_socket.send(send_packet);
 
+            /* Send the information to the main */
+            send_data = "COMY";
+            send_bytes = send_data.getBytes();
+            send_packet = new DatagramPacket(send_bytes, send_bytes.length, receive_packet.getAddress(), main_port);
+            this.connection_socket.send(send_packet);
+
+          }
+
+          else{
+            /* Send the information to the main */
+            send_data = "COMN";
+            send_bytes = send_data.getBytes();
+            send_packet = new DatagramPacket(send_bytes, send_bytes.length, receive_packet.getAddress(), main_port);
+            this.connection_socket.send(send_packet);
           }
 
         }
@@ -1436,6 +1550,12 @@ class Pull_node extends Thread{
             send_data = to_propagate;
             send_bytes = send_data.getBytes();
             send_packet = new DatagramPacket(send_bytes, send_bytes.length, receive_packet.getAddress(), receive_packet.getPort());
+            this.connection_socket.send(send_packet);
+
+            /* Send the information to the main */
+            send_data = "COMR";
+            send_bytes = send_data.getBytes();
+            send_packet = new DatagramPacket(send_bytes, send_bytes.length, receive_packet.getAddress(), main_port);
             this.connection_socket.send(send_packet);
 
           }catch(Exception e){
