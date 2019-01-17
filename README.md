@@ -1,11 +1,15 @@
 # Difusion Communication
 
 # Usage
-java Constructor TYPE algorihm_id graph_size delay timeout
+java Constructor NodeType AlgorithmID SizeOfGraph ConnectionDelay Timeout
 
-(gossip doesn't use timeout)
+## NodeType
+ - GOSSIP
+ - PUSHPULL
+ - PUSH
+ - PULL
 
-## Fully functional graphs
+## AlgorithmID
 ### 1 - Barabasi Albert
 ### 3 - Chvatal
 ### 4 - Dorogovtsev-Mendes
@@ -24,6 +28,7 @@ Weird node identification
 ### Incomplete Grid
 Weird node identification
 
+## Run Starter to send a message to a node
 
 ## Installing Java
 
@@ -35,24 +40,6 @@ https://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.
 
 In the system variables, alter the variable "Path" and add "C:\Program Files\Java\jdk1.8.0_191\bin"
 **check if your instalation path is equal**
-
-## Running java programs
-
-### Compiling
-
-Use "javac +file+.java"
-Eg. javac helloworld.java
-
-### Running
-
-Use "java +classname+"
-Eg. java HelloWorld
-
-## Java sockets exaple
-### In separate terminals
-
-    java Server
-    java Client
 
 ## Java Graphs visualization
 

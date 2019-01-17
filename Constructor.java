@@ -499,6 +499,7 @@ class Constructor{
       
       /* Initializing files for output */
       PrintWriter writer = null;
+      boolean off = true;
 
       /* Loop to receive the information about the network */
       while(true){
@@ -514,7 +515,7 @@ class Constructor{
           * into a string in order to be readable */
           connection_socket.receive(receive_packet);
           receive_data = new String(receive_packet.getData()).trim();
-          
+
           /* Process the information received about the structure and modify the graph accordingly */
           if(receive_data.contains("COM")){
             comunication_counter++;
@@ -532,13 +533,15 @@ class Constructor{
 
             /* GOSSIP - Communication timer, comunication counter, latest time of propagation, number of nodes spread, number of positive ack, number of negative ack, number of requests */
             /* Entropy - Communication timer, comunication counter, latest time of propagation, number of nodes spread, number of positive ack, useless messagens, number of requests */
-            if(difunded_nodes != size_of_graph - 1 && System.currentTimeMillis()-difusion_starting_timer < 20000){
+            if(difunded_nodes < size_of_graph - 1 && System.currentTimeMillis()-difusion_starting_timer < 19000 && off == false){
               writer.println(Long.toString(System.currentTimeMillis()-difusion_starting_timer) + "," + Integer.toString(comunication_counter) + "," + Long.toString(difusion_end_timer-difusion_starting_timer) + "," + Integer.toString(difunded_nodes) + "," + Integer.toString(pos_ack_counter) + "," + Integer.toString(neg_ack_counter) + "," + Integer.toString(request_counter));
               //System.out.println(Long.toString(System.currentTimeMillis()-difusion_starting_timer) + "," + Integer.toString(comunication_counter) + "," + Long.toString(difusion_end_timer-difusion_starting_timer) + "," + Integer.toString(difunded_nodes) + "," + Integer.toString(pos_ack_counter) + "," + Integer.toString(neg_ack_counter) + "," + Integer.toString(request_counter));
-
             }
-            else{
+            else if((difunded_nodes == size_of_graph - 1 || System.currentTimeMillis()-difusion_starting_timer >= 19000) && off == false){
+              writer.println(Long.toString(System.currentTimeMillis()-difusion_starting_timer) + "," + Integer.toString(comunication_counter) + "," + Long.toString(difusion_end_timer-difusion_starting_timer) + "," + Integer.toString(difunded_nodes) + "," + Integer.toString(pos_ack_counter) + "," + Integer.toString(neg_ack_counter) + "," + Integer.toString(request_counter));
+              while (System.currentTimeMillis()-difusion_starting_timer >= 19500);
               writer.close();
+              off = true;
             }
 
           }
@@ -712,12 +715,21 @@ class Constructor{
               }
               /* New connection, restart the counter and timer and file */
               else{
+                writer = new PrintWriter("data/data_" + Integer.toString(message_counter) + ".csv", "UTF-8");
+                writer.println("Communication timer, comunication counter, latest time of propagation, number of nodes spread, number of positive ack, number of negative ack, number of requests");
+                
                 message_counter++;
-                writer = new PrintWriter("data/data_" + Integer.toString(message_counter) + ".txt", "UTF-8");
+                off = false;
+
                 comunication_counter = 0;
+                pos_ack_counter = 0;
+                neg_ack_counter = 0;
+                request_counter = 0;
+                
                 difunded_nodes = 0;
                 difusion_starting_timer = System.currentTimeMillis();
                 difusion_end_timer = difusion_starting_timer;
+
                 
               }
               
